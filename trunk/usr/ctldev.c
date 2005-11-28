@@ -121,8 +121,10 @@ static int iscsi_lunit_create(u32 tid, u32 lun, char *args)
 
 	strncpy(info.args, args, sizeof(info.args) - 1);
 
-	if ((err = ioctl(ctrl_fd, ADD_VOLUME, &info)) < 0)
-		fprintf(stderr, "%s %d %d", __FUNCTION__, errno, err);
+	err = ioctl(ctrl_fd, ADD_VOLUME, &info);
+	if (err < 0)
+		log_warning("Can't create a logical unit %d %u %u %s\n",
+			    errno, tid, lun, args);
 
 	return err;
 }
@@ -136,8 +138,10 @@ static int iscsi_lunit_destroy(u32 tid, u32 lun)
 	info.tid = tid;
 	info.lun = lun;
 
-	if ((err = ioctl(ctrl_fd, DEL_VOLUME, &info)) < 0)
-		fprintf(stderr, "%s %d %d", __FUNCTION__, errno, err);
+	err = ioctl(ctrl_fd, DEL_VOLUME, &info);
+	if (err < 0)
+		log_warning("Can't destroy a logical unit %d %u %u\n",
+			    errno, tid, lun);
 
 	return err;
 }
