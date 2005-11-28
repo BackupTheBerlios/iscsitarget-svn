@@ -10,11 +10,12 @@ We borrow code from an Ardis iSCSI target (with respect to the GPL).
 Installation
 -------------
 The iSCSI target requires a host running the Linux operating system
-with a kernel version of 2.6.13 or newer. You need to enable 
-"Cryptographic API" under "Cryptographic options" in the kernel config. 
-You also need to enable "CRC32c CRC algorithm" if you use header or data 
-digests. They are the kernel options, CONFIG_CRYPTO and CONFIG_CRYPTO_CRC32C,
-respectively.
+with a kernel version of 2.6.14 or newer. You need to enable
+"Cryptographic API" under "Cryptographic options" in the kernel
+config.  You also need to enable "CRC32c CRC algorithm" if you use
+header or data digests. They are the kernel options, CONFIG_CRYPTO and
+CONFIG_CRYPTO_CRC32C, respectively. The user-space code requires
+OpenSSL library (http://www.openssl.org/).
 
 The iSCSI target consists of kernel modules and a daemon. The
 compilation of the kernel modules require the path to above kernel
@@ -22,12 +23,13 @@ sources:
 
 	make KERNELSRC=<kernel-src>
 
-The path can also be set by editing the main Makefile. If KERNELSRC is omitted,
-make program will try to locate the kernel sources for current running kernel.
-Be sure to check whether it finds the right kernel sources.
+The path can also be set by editing the main Makefile. If KERNELSRC is
+omitted, make program will try to locate the kernel sources for
+current running kernel.  Be sure to check whether it finds the right
+kernel sources.
 
-This will build the modules, the daemon, and the control tool. To install both, 
-use:
+This will build the modules, the daemon, and the control tool. To
+install both, use:
 
 	make KERNELSRC=<kernel-src> install
 
