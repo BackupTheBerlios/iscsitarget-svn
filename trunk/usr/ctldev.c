@@ -116,7 +116,7 @@ static int iscsi_lunit_create(u32 tid, u32 lun, char *args)
 
 	while (isspace(*args))
 		args++;
-	if ((p = strchr(args, '\n')))
+	for (p = args + (strlen(args) - 1); isspace(*p); p--)
 		*p = '\0';
 
 	strncpy(info.args, args, sizeof(info.args) - 1);
