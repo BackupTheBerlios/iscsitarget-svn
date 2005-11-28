@@ -426,6 +426,10 @@ static int __plain_target_create(u32 *tid, char *name, int update)
 {
 	int err;
 
+	if (target_find_by_name(name)) {
+		log_error("duplicated target %s", name);
+		return -EINVAL;
+	}
 	if ((err = target_add(tid, name)) < 0)
 		return err;
 
