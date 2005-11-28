@@ -85,6 +85,14 @@ restart()
         start
 }
 
+condrestart()
+{
+	PID=`pidofproc ietd`
+	if [ $PID ]; then
+        	restart
+	fi
+}
+
 status()
 {
 	PID=`pidofproc ietd`
@@ -105,6 +113,9 @@ case "$1" in
         ;;
   restart)
         restart
+        ;;
+  condrestart)
+        condrestart
         ;;
   status)
         status
