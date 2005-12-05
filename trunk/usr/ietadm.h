@@ -11,7 +11,7 @@ struct msg_trgt {
 	u32 session_partial;
 	u32 target_partial;
 	struct iscsi_param session_param[session_key_last];
-	struct iscsi_param target_param[session_key_last];
+	struct iscsi_param target_param[target_key_last];
 };
 
 struct msg_acnt {
