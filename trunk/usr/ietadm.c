@@ -134,12 +134,19 @@ static int ietd_request_send(int fd, struct ietadm_req *req)
 	return err;
 }
 
-static int ietd_response_recv(int fd)
+static int ietd_response_recv(int fd, struct ietadm_req *req)
 {
 	int err;
+	struct iovec iov[2];
 	struct ietadm_rsp rsp;
 
-	if ((err = read(fd, &rsp, sizeof(rsp))) != sizeof(rsp)) {
+	iov[0].iov_base = req;
+	iov[0].iov_len = sizeof(*req);
+	iov[1].iov_base = &rsp;
+	iov[1].iov_len = sizeof(rsp);
+
+	err = readv(fd, iov, 2);
+	if (err != sizeof(rsp) + sizeof(*req)) {
 		fprintf(stderr, "%s %d %d\n", __FUNCTION__, __LINE__, err);
 		if (err >= 0)
 			err = -EIO;
@@ -180,7 +187,7 @@ static int ietd_request(struct ietadm_req *req)
 	if ((err = ietd_request_send(fd, req)) < 0)
 		goto out;
 
-	err = ietd_response_recv(fd);
+	err = ietd_response_recv(fd, req);
 
 out:
 	if (fd > 0)
@@ -305,9 +312,25 @@ out:
 	return err;
 }
 
+static void show_iscsi_param(struct iscsi_param *param)
+{
+	int i;
+	char buf[1024], *p;
+
+	for (i = 0; i < session_key_last; i++) {
+		memset(buf, 0, sizeof(buf));
+		strcpy(buf, session_keys[i].name);
+		p = buf + strlen(buf);
+		*p++ = '=';
+		param_val_to_str(session_keys, i, param[i].val, p);
+		printf("%s\n", buf);
+	}
+}
+
 static int sess_handle(int op, u32 set, u32 tid, u64 sid, char *params)
 {
 	int err = -EINVAL;
+	struct ietadm_req req;
 
 	if (op == OP_NEW || op == OP_UPDATE) {
 		fprintf(stderr, "Unsupported.\n");
@@ -317,12 +340,18 @@ static int sess_handle(int op, u32 set, u32 tid, u64 sid, char *params)
 	if (!((set & SET_TARGET) && (set & SET_SESSION)))
 		goto out;
 
+	req.tid = tid;
+	req.sid = sid;
+	req.u.trgt.type = key_session;
+
 	switch (op) {
 	case OP_DELETE:
 		/* close all connections */
 		break;
 	case OP_SHOW:
-		/* TODO */
+		req.rcmnd = C_SESS_SHOW;
+		err = ietd_request(&req);
+		show_iscsi_param(req.u.trgt.session_param);
 		break;
 	}
 

@@ -72,7 +72,10 @@ static void ietadm_request_exec(struct ietadm_req *req, struct ietadm_rsp *rsp)
 	case C_SESS_NEW:
 	case C_SESS_DEL:
 	case C_SESS_UPDATE:
+		break;
 	case C_SESS_SHOW:
+		err = ki->param_get(req->tid, req->sid,
+				    req->u.trgt.session_param);
 		break;
 
 	case C_LUNIT_NEW:
@@ -127,6 +130,7 @@ int ietadm_request_handle(int accept_fd)
 	socklen_t len;
 	struct ietadm_req req;
 	struct ietadm_rsp rsp;
+	struct iovec iov[2];
 
 	memset(&rsp, 0, sizeof(rsp));
 	len = sizeof(addr);
@@ -159,9 +163,12 @@ int ietadm_request_handle(int accept_fd)
 	ietadm_request_exec(&req, &rsp);
 
 send:
-	if ((err = write(fd, &rsp, sizeof(rsp))) != sizeof(rsp))
-		if (err >= 0)
-			err = -EIO;
+	iov[0].iov_base = &req;
+	iov[0].iov_len = sizeof(req);
+	iov[1].iov_base = &rsp;
+	iov[1].iov_len = sizeof(rsp);
+
+	err = writev(fd, iov, 2);
 out:
 	if (fd > 0)
 		close(fd);
