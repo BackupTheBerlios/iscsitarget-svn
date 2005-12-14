@@ -90,12 +90,7 @@ static int plain_account_init(char *filename)
 	FILE *fp;
 	char buf[BUFSIZE], *p, *q;
 	u32 tid;
-	int i, idx;
-
-	for (i = 0; i < 1 << HASH_ORDER; i++) {
-		INIT_LIST_HEAD(&trgt_acct_in[i]);
-		INIT_LIST_HEAD(&trgt_acct_out[i]);
-	}
+	int idx;
 
 	if (!(fp = fopen(filename, "r")))
 		return -EIO;
@@ -565,7 +560,12 @@ static int plain_main_init(char *filename)
 
 static int plain_init(char *params)
 {
-	int err;
+	int i, err;
+
+	for (i = 0; i < 1 << HASH_ORDER; i++) {
+		INIT_LIST_HEAD(&trgt_acct_in[i]);
+		INIT_LIST_HEAD(&trgt_acct_out[i]);
+	}
 
 	/* First, we must finish the main configuration. */
 	if ((err = plain_main_init(params ? params : CONFIG_FILE)))
