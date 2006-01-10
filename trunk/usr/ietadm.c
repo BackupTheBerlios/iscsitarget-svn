@@ -66,6 +66,12 @@ iSCSI Enterprise Target Administration Utility.\n\
   --op delete --tid=[id]\n\
                         delete specific target with [id]. The target must\n\
                         have no active sessions.\n\
+  --op show --tid=[id]\n\
+                        show target parameters of target with [id].\n\
+  --op show --tid=[id] --sid=[sid]\n\
+                        show iSCSI parameters in effect for session [sid]. If\n\
+                        [sid] is \"0\" (zero), the configured parameters\n\
+                        will be displayed.\n\
   --op new --tid=[id] --lun=[lun] --params Path=[path]\n\
                         add a new logical unit with [lun] to specific\n\
                         target with [id]. The logical unit is offered\n\
