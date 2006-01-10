@@ -198,6 +198,30 @@ out:
 	return err;
 }
 
+static void show_iscsi_param(int type, struct iscsi_param *param)
+{
+	int i, nr;
+	char buf[1024], *p;
+	struct iscsi_key *keys;
+
+	if (type == key_session) {
+		nr = session_key_last;
+		keys = session_keys;
+	} else {
+		nr = target_key_last;
+		keys = target_keys;
+	}
+
+	for (i = 0; i < nr; i++) {
+		memset(buf, 0, sizeof(buf));
+		strcpy(buf, keys[i].name);
+		p = buf + strlen(buf);
+		*p++ = '=';
+		param_val_to_str(keys, i, param[i].val, p);
+		printf("%s\n", buf);
+	}
+}
+
 static int parse_trgt_params(struct msg_trgt *msg, char *params)
 {
 	char *p, *q;
@@ -271,6 +295,8 @@ static int trgt_handle(int op, u32 set, u32 tid, char *params)
 	}
 
 	err = ietd_request(&req);
+	if (req.rcmnd == C_TRGT_SHOW)
+		show_iscsi_param(key_target, req.u.trgt.target_param);
 
 out:
 	return err;
@@ -312,21 +338,6 @@ out:
 	return err;
 }
 
-static void show_iscsi_param(struct iscsi_param *param)
-{
-	int i;
-	char buf[1024], *p;
-
-	for (i = 0; i < session_key_last; i++) {
-		memset(buf, 0, sizeof(buf));
-		strcpy(buf, session_keys[i].name);
-		p = buf + strlen(buf);
-		*p++ = '=';
-		param_val_to_str(session_keys, i, param[i].val, p);
-		printf("%s\n", buf);
-	}
-}
-
 static int sess_handle(int op, u32 set, u32 tid, u64 sid, char *params)
 {
 	int err = -EINVAL;
@@ -351,7 +362,7 @@ static int sess_handle(int op, u32 set, u32 tid, u64 sid, char *params)
 	case OP_SHOW:
 		req.rcmnd = C_SESS_SHOW;
 		err = ietd_request(&req);
-		show_iscsi_param(req.u.trgt.session_param);
+		show_iscsi_param(key_session, req.u.trgt.session_param);
 		break;
 	}
 

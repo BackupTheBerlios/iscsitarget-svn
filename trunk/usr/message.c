@@ -67,6 +67,8 @@ static void ietadm_request_exec(struct ietadm_req *req, struct ietadm_rsp *rsp)
 					      req->u.trgt.target_param);
 		break;
 	case C_TRGT_SHOW:
+		err = ki->param_get(req->tid, req->sid, key_target,
+				    req->u.trgt.target_param);
 		break;
 
 	case C_SESS_NEW:
