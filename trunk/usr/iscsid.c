@@ -384,7 +384,7 @@ static void login_start(struct connection *conn)
 /* 			return; */
 /* 		} */
 
-		ki->param_get(conn->tid, 0, conn->session_param);
+		ki->param_get(conn->tid, 0, key_session, conn->session_param);
 		conn->exp_cmd_sn = be32_to_cpu(req->cmd_sn);
 		log_debug(1, "exp_cmd_sn: %d,%d", conn->exp_cmd_sn, req->cmd_sn);
 		conn->max_cmd_sn = conn->exp_cmd_sn;

@@ -284,7 +284,7 @@ int session_conns_close(u32 tid, u64 sid)
 	return err;
 }
 
-static int iscsi_param_get(u32 tid, u64 sid, struct iscsi_param *param)
+static int iscsi_param_get(u32 tid, u64 sid, int type, struct iscsi_param *param)
 {
 	int err, i;
 	struct iscsi_param_info info;
@@ -292,12 +292,17 @@ static int iscsi_param_get(u32 tid, u64 sid, struct iscsi_param *param)
 	memset(&info, 0, sizeof(info));
 	info.tid = tid;
 	info.sid = sid;
+	info.param_type = type;
 
 	if ((err = ioctl(ctrl_fd, ISCSI_PARAM_GET, &info)) < 0)
 		log_error("Can't set session param %d %d\n", info.tid, errno);
 
-	for (i = 0; i < session_key_last; i++)
-		param[i].val = info.session_param[i];
+	if (type == key_session)
+		for (i = 0; i < session_key_last; i++)
+			param[i].val = info.session_param[i];
+	else
+		for (i = 0; i < target_key_last; i++)
+			param[i].val = info.target_param[i];
 
 	return err;
 }

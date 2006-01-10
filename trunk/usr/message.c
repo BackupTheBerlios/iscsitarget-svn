@@ -74,7 +74,7 @@ static void ietadm_request_exec(struct ietadm_req *req, struct ietadm_rsp *rsp)
 	case C_SESS_UPDATE:
 		break;
 	case C_SESS_SHOW:
-		err = ki->param_get(req->tid, req->sid,
+		err = ki->param_get(req->tid, req->sid, key_session,
 				    req->u.trgt.session_param);
 		break;
 
