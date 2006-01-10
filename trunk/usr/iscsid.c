@@ -301,6 +301,10 @@ static int text_check_param(struct connection *conn)
 				param_val_to_str(session_keys, i, p[i].val,
 						 buf);
 				text_key_add(conn, session_keys[i].name, buf);
+				if (i == key_max_recv_data_length) {
+					p[i].state = KEY_STATE_DONE;
+					continue;
+				}
 				p[i].state = KEY_STATE_REQUEST;
 				break;
 			default:
