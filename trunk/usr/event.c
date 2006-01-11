@@ -106,23 +106,24 @@ int nl_open(void)
 {
 	int nl_fd, res;
 
-	if (!(nl_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_IET)))
+	nl_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_IET);
+	if (nl_fd == -1) {
+		log_error("%s %d\n", __FUNCTION__, errno);
 		return -1;
+	}
 
 	memset(&src_addr, 0, sizeof(src_addr));
 	src_addr.nl_family = AF_NETLINK;
 	src_addr.nl_pid = getpid();
 	src_addr.nl_groups = 0; /* not in mcast groups */
-	if (bind(nl_fd, (struct sockaddr *)&src_addr, sizeof(src_addr))) {
-		return -1;
-	}
 
 	memset(&dest_addr, 0, sizeof(dest_addr));
 	dest_addr.nl_family = AF_NETLINK;
 	dest_addr.nl_pid = 0; /* kernel */
 	dest_addr.nl_groups = 0; /* unicast */
 
-	if ((res = nl_write(nl_fd, NULL, 0)) < 0) {
+	res = nl_write(nl_fd, NULL, 0);
+	if (res < 0) {
 		log_error("%s %d\n", __FUNCTION__, res);
 		return res;
 	}
