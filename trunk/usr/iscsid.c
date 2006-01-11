@@ -322,7 +322,6 @@ static void login_start(struct connection *conn)
 {
 	struct iscsi_login_req_hdr *req = (struct iscsi_login_req_hdr *)&conn->req.bhs;
 	struct iscsi_login_rsp_hdr *rsp = (struct iscsi_login_rsp_hdr *)&conn->rsp.bhs;
-	struct iscsi_param trgt_param[target_key_last];
 	char *name, *alias, *session_type, *target_name;
 
 	conn->cid = be16_to_cpu(req->cid);
@@ -386,11 +385,9 @@ static void login_start(struct connection *conn)
 /* 		} */
 
 		ki->param_get(conn->tid, 0, key_session, conn->session_param);
-		ki->param_get(conn->tid, 0, key_target, trgt_param);
 		conn->exp_cmd_sn = be32_to_cpu(req->cmd_sn);
 		log_debug(1, "exp_cmd_sn: %d,%d", conn->exp_cmd_sn, req->cmd_sn);
-		conn->max_cmd_sn =
-			conn->exp_cmd_sn + trgt_param[key_queued_cmnds].val;
+		conn->max_cmd_sn = conn->exp_cmd_sn;
 	}
 	text_key_add(conn, "TargetPortalGroupTag", "1");
 }
