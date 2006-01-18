@@ -1548,7 +1548,7 @@ static int check_segment_length(struct iscsi_cmnd *cmnd)
 	struct iscsi_sess_param *param = &conn->session->param;
 
 	if (cmnd->pdu.datasize > param->max_recv_data_length) {
-		eprintk("too lond data %x %u %u\n", cmnd_itt(cmnd),
+		eprintk("data too long %x %u %u\n", cmnd_itt(cmnd),
 			cmnd->pdu.datasize, param->max_recv_data_length);
 
 		if (get_pgcnt(cmnd->pdu.datasize, 0) > ISCSI_CONN_IOV_MAX) {
