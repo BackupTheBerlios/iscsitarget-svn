@@ -223,10 +223,10 @@ static void iscsi_cmnd_init_write(struct iscsi_cmnd *cmnd)
 	LIST_HEAD(head);
 
 	if (!list_empty(&cmnd->list)) {
-		eprintk("%x %x %x %x %lx %lx %u %u %u %u %u %u %u %d %d\n",
+		eprintk("%x %x %x %x %lx %u %u %u %u %u %u %u %d %d\n",
 			cmnd_itt(cmnd), cmnd_ttt(cmnd), cmnd_opcode(cmnd),
-			cmnd_scsicode(cmnd), cmnd->state, cmnd->flags,
-			cmnd->r2t_sn, cmnd->r2t_length, cmnd->is_unsolicited_data,
+			cmnd_scsicode(cmnd), cmnd->flags, cmnd->r2t_sn,
+			cmnd->r2t_length, cmnd->is_unsolicited_data,
 			cmnd->target_task_tag, cmnd->outstanding_r2t,
 			cmnd->hdigest, cmnd->ddigest,
 			list_empty(&cmnd->pdu_list), list_empty(&cmnd->hash_list));
@@ -401,10 +401,11 @@ void iscsi_cmnd_remove(struct iscsi_cmnd *cmnd)
 	if (!list_empty(&cmnd->list)) {
 		struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
 
-		eprintk("cmnd %p still on some list?, %x, %x, %x, %x, %x, %x, %x %lx %lx\n",
+		eprintk("cmnd %p still on some list?, %x, %x, %x, %x, %x, %x, %x %lx\n",
 			cmnd, req->opcode, req->scb[0], req->flags, req->itt,
 			be32_to_cpu(req->data_length),
-			req->cmd_sn, be32_to_cpu(cmnd->pdu.datasize), cmnd->state, conn->state);
+			req->cmd_sn, be32_to_cpu(cmnd->pdu.datasize),
+			conn->state);
 
 		if (cmnd->req) {
 			struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd->req);
