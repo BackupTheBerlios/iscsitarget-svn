@@ -21,9 +21,9 @@ The iSCSI target consists of kernel modules and a daemon. The
 compilation of the kernel modules require the path to above kernel
 sources:
 
-	make KERNELSRC=<kernel-src>
+	make KSRC=<kernel-src>
 
-The path can also be set by editing the main Makefile. If KERNELSRC is
+The path can also be set by editing the main Makefile. If KSRC is
 omitted, make program will try to locate the kernel sources for
 current running kernel.  Be sure to check whether it finds the right
 kernel sources.
@@ -31,7 +31,7 @@ kernel sources.
 This will build the modules, the daemon, and the control tool. To
 install both, use:
 
-	make KERNELSRC=<kernel-src> install
+	make KSRC=<kernel-src> install
 
 The kernel modules will be install in the module directory of the
 kernel. The daemon and the control tool will be installed as ietd and
