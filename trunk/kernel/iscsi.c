@@ -942,6 +942,7 @@ static void scsi_cmnd_start(struct iscsi_conn *conn, struct iscsi_cmnd *req)
 			eprintk("%x %x\n", cmnd_itt(req), req_hdr->scb[0]);
 			create_sense_rsp(req, ABORTED_COMMAND, 0xc, 0xc);
 			cmnd_skip_data(req);
+			break;
 		}
 
 		set_offset_and_length(req->lun, req_hdr->scb, &offset, &length);
