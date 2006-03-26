@@ -315,25 +315,6 @@ static struct iscsi_cmnd *create_scsi_rsp(struct iscsi_cmnd *req)
 	return rsp;
 }
 
-void send_scsi_rsp(struct iscsi_cmnd *req, int (*func)(struct iscsi_cmnd *))
-{
-	struct iscsi_cmnd *rsp;
-	struct iscsi_scsi_rsp_hdr *rsp_hdr;
-	u32 size;
-
-	rsp = create_scsi_rsp(req);
-	rsp_hdr = (struct iscsi_scsi_rsp_hdr *) &rsp->pdu.bhs;
-	if ((size = cmnd_read_size(req)) != 0) {
-		rsp_hdr->flags |= ISCSI_FLG_RESIDUAL_UNDERFLOW;
-		rsp_hdr->residual_count = cpu_to_be32(size);
-	}
-
-	if (func(req) < 0)
-		eprintk("%x\n", cmnd_opcode(req));
-
-	iscsi_cmnd_init_write(rsp);
-}
-
 static struct iscsi_cmnd *create_sense_rsp(struct iscsi_cmnd *req,
 					   u8 sense_key, u8 asc, u8 ascq)
 {
@@ -369,15 +350,47 @@ static struct iscsi_cmnd *create_sense_rsp(struct iscsi_cmnd *req,
 	return rsp;
 }
 
+void send_scsi_rsp(struct iscsi_cmnd *req, int (*func)(struct iscsi_cmnd *))
+{
+	struct iscsi_cmnd *rsp;
+	struct iscsi_scsi_rsp_hdr *rsp_hdr;
+	u32 size;
+
+	switch (func(req)) {
+	case 0:
+		rsp = create_scsi_rsp(req);
+		rsp_hdr = (struct iscsi_scsi_rsp_hdr *) &rsp->pdu.bhs;
+		if ((size = cmnd_read_size(req)) != 0) {
+			rsp_hdr->flags |= ISCSI_FLG_RESIDUAL_UNDERFLOW;
+			rsp_hdr->residual_count = cpu_to_be32(size);
+		}
+		break;
+	case -EIO:
+		/* Medium Error/Write Fault */
+		rsp = create_sense_rsp(req, MEDIUM_ERROR, 0x03, 0x0);
+		break;
+	default:
+		rsp = create_sense_rsp(req, ILLEGAL_REQUEST, 0x24, 0x0);
+	}
+	iscsi_cmnd_init_write(rsp);
+}
+
 void send_data_rsp(struct iscsi_cmnd *req, int (*func)(struct iscsi_cmnd *))
 {
 	struct iscsi_cmnd *rsp;
 
-	if (func(req) < 0) {
-		rsp = create_sense_rsp(req, ILLEGAL_REQUEST, 0x24, 0x0);
-		iscsi_cmnd_init_write(rsp);
-	} else
+	switch (func(req)) {
+	case 0:
 		do_send_data_rsp(req);
+		return;
+	case -EIO:
+		/* Medium Error/Unrecovered Read Error */
+		rsp = create_sense_rsp(req, MEDIUM_ERROR, 0x11, 0x0);
+		break;
+	default:
+		rsp = create_sense_rsp(req, ILLEGAL_REQUEST, 0x24, 0x0);
+	}
+	iscsi_cmnd_init_write(rsp);
 }
 
 /**
