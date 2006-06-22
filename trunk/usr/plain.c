@@ -531,7 +531,7 @@ static int plain_main_init(char *filename)
 			if (!(p = target_sep_string(&q)))
 				continue;
 			if (__plain_target_create(&tid, p, 0))
-				log_debug(1, "creaing target %s", p);
+				log_debug(1, "creating target %s", p);
 		} else if (!strcasecmp(p, "Alias") && tid) {
 			;
 		} else if (!strcasecmp(p, "MaxSessions") && tid) {
