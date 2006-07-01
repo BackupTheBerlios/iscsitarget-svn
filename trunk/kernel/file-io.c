@@ -74,15 +74,16 @@ static int fileio_make_request(struct iet_volume *lu, struct tio *tio, int rw)
 static int fileio_sync(struct iet_volume *lu, struct tio *tio)
 {
 	struct fileio_data *p = (struct fileio_data *) lu->private;
-	struct inode *inode;
+	struct inode *inode = p->filp->f_dentry->d_inode;
+	struct address_space *mapping = inode->i_mapping;
 	loff_t ppos = (loff_t) tio->idx << PAGE_CACHE_SHIFT;
-	ssize_t res;
+	int res;
 
-	assert(p);
-	inode = p->filp->f_dentry->d_inode;
-
-	res = sync_page_range(inode, inode->i_mapping, ppos, (size_t) tio->size);
-
+	res = sync_page_range(inode, mapping, ppos, (size_t) tio->size);
+	if (res) {
+		eprintk("I/O error: syncing pages failed: %d\n", res);
+		return -EIO;
+	}
 	return 0;
 }
 
