@@ -385,7 +385,6 @@ int main(int argc, char **argv)
 {
 	int ch, longindex;
 	char *config = NULL;
-	char isns_ip[32];
 	uid_t uid = 0;
 	gid_t gid = 0;
 
@@ -401,9 +400,6 @@ int main(int argc, char **argv)
 			log_level = atoi(optarg);
 			break;
 		case 's':
-			memset(isns_ip, 0, sizeof(isns_ip));
-			strncpy(isns_ip, optarg, sizeof(isns_ip));
-			use_isns = 1;
 			break;
 		case 'u':
 			uid = strtoul(optarg, NULL, 10);
@@ -479,11 +475,6 @@ int main(int argc, char **argv)
 		setsid();
 	}
 
-	if (use_isns) {
-		if (initialize_iet_isns(isns_ip, server_port) < 0)
-			use_isns = 0;
-	}
-
 	cops->init(config);
 
 	if (gid && setgid(gid) < 0)
@@ -493,10 +484,6 @@ int main(int argc, char **argv)
 		perror("setuid\n");
 
 	event_loop();
-
-	if (use_isns) {
-		cleanup_iet_isns();
-	}
 
 	return 0;
 }
