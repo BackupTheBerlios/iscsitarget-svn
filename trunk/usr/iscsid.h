@@ -148,6 +148,7 @@ extern void conn_free_pdu(struct connection *conn);
 
 /* ietd.c */
 extern uint16_t server_port;
+extern void isns_set_fd(int);
 
 /* iscsid.c */
 extern int iscsi_debug;
@@ -213,6 +214,13 @@ extern void handle_iscsi_events(int fd);
 extern int nl_open(void);
 
 /* param.c */
-int param_index_by_name(char *name, struct iscsi_key *keys);
+extern int param_index_by_name(char *name, struct iscsi_key *keys);
+
+/* isns.c */
+extern int isns_init(char *addr);
+extern int isns_handle(int is_timeout, int *timeout);
+extern int isns_target_register(char *name);
+extern int isns_target_deregister(char *name);
+extern void isns_exit(void);
 
 #endif	/* ISCSID_H */

@@ -90,6 +90,7 @@ int target_del(u32 tid)
 	all_accounts_del(tid, AUTH_DIR_INCOMING);
 	all_accounts_del(tid, AUTH_DIR_OUTGOING);
 
+	isns_target_deregister(target->name);
 	free(target);
 
 	return 0;
@@ -118,6 +119,8 @@ int target_add(u32 *tid, char *name)
 	INIT_LIST_HEAD(&target->sessions_list);
 	target->tid = *tid;
 	insque(&target->tlist, &targets_list);
+
+	isns_target_register(name);
 
 	return 0;
 out:

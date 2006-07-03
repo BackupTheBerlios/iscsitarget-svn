@@ -7,6 +7,8 @@
 #define ISCSI_NAME_LEN	256
 #define ISCSI_ARGS_LEN	2048
 
+#define ISCSI_LISTEN_PORT	3260
+
 #define VENDOR_ID_LEN	8
 #define SCSI_ID_LEN	24
 

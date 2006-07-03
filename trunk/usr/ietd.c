@@ -35,14 +35,13 @@ enum {
 	POLL_LISTEN,
 	POLL_IPC = POLL_LISTEN + LISTEN_MAX,
 	POLL_NL,
+	POLL_ISNS,
 	POLL_INCOMING,
 	POLL_MAX = POLL_INCOMING + INCOMING_MAX,
 };
 
-#define ISCSI_TARGET_DEFAULT_PORT	3260
-
 static char* server_address;
-uint16_t server_port = ISCSI_TARGET_DEFAULT_PORT;
+uint16_t server_port = ISCSI_LISTEN_PORT;
 
 static struct pollfd poll_array[POLL_MAX];
 static struct connection *incoming[INCOMING_MAX];
@@ -205,7 +204,16 @@ static void accept_connection(int listen)
 		poll_array[POLL_LISTEN].events = 0;
 }
 
-void event_loop(void)
+void isns_set_fd(int fd)
+{
+	poll_array[POLL_ISNS].fd = fd;
+	if (fd)
+		poll_array[POLL_ISNS].events = POLLIN;
+	else
+		poll_array[POLL_ISNS].events = 0;
+}
+
+void event_loop(int timeout)
 {
 	int res, i, opt;
 	struct connection *conn;
@@ -225,8 +233,11 @@ void event_loop(void)
 	}
 
 	while (1) {
-		res = poll(poll_array, POLL_MAX, -1);
-		if (res <= 0) {
+		res = poll(poll_array, POLL_MAX, timeout);
+		if (res == 0) {
+			isns_handle(1, &timeout);
+			continue;
+		} else if (res < 0) {
 			if (res < 0 && errno != EINTR) {
 				perror("poll()");
 				exit(1);
@@ -245,6 +256,9 @@ void event_loop(void)
 
 		if (poll_array[POLL_IPC].revents)
 			ietadm_request_handle(ipc_fd);
+
+		if (poll_array[POLL_ISNS].revents)
+			isns_handle(0, &timeout);
 
 		for (i = 0; i < INCOMING_MAX; i++) {
 			conn = incoming[i];
@@ -383,10 +397,11 @@ void event_loop(void)
 
 int main(int argc, char **argv)
 {
-	int ch, longindex;
+	int ch, longindex, timeout = -1;
 	char *config = NULL;
 	uid_t uid = 0;
 	gid_t gid = 0;
+	char *isns = NULL;
 
 	while ((ch = getopt_long(argc, argv, "c:fd:s:u:g:a:p:vh", long_options, &longindex)) >= 0) {
 		switch (ch) {
@@ -400,6 +415,7 @@ int main(int argc, char **argv)
 			log_level = atoi(optarg);
 			break;
 		case 's':
+			isns = optarg;
 			break;
 		case 'u':
 			uid = strtoul(optarg, NULL, 10);
@@ -475,6 +491,9 @@ int main(int argc, char **argv)
 		setsid();
 	}
 
+	if (isns)
+		timeout = isns_init(isns);
+
 	cops->init(config);
 
 	if (gid && setgid(gid) < 0)
@@ -483,7 +502,7 @@ int main(int argc, char **argv)
 	if (uid && setuid(uid) < 0)
 		perror("setuid\n");
 
-	event_loop();
+	event_loop(timeout);
 
 	return 0;
 }

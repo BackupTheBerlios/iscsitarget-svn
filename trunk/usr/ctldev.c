@@ -251,6 +251,8 @@ int server_stop(void)
 
 	proc_session_parse(ctrl_fd, &target_del_ops, NULL);
 
+	isns_exit();
+
 	return 0;
 }
 
