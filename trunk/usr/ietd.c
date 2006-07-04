@@ -132,6 +132,10 @@ static void create_listen_socket(struct pollfd *array)
 		}
 
 		opt = 1;
+		if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)))
+			log_warning("unable to set SO_KEEPALIVE on server socket (%s)!",
+				    strerror(errno));
+		opt = 1;
 		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
 			log_warning("unable to set SO_REUSEADDR on server socket (%s)!",
 				    strerror(errno));
