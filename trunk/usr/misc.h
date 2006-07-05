@@ -42,8 +42,8 @@ static inline int list_empty(const struct qelem *head)
 	     &pos->member != (head); 	\
 	     pos = list_entry(pos->member.q_forw, typeof(*pos), member))
 
-#endif
 #ifndef IPV6_V6ONLY
 #define IPV6_V6ONLY	26
+#endif
 
 #endif
