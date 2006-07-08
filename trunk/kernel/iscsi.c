@@ -841,7 +841,8 @@ static int noop_out_start(struct iscsi_conn *conn, struct iscsi_cmnd *cmnd)
 			eprintk("%s\n","initiator bug!");
 		update_stat_sn(cmnd);
 		err = check_cmd_sn(cmnd);
-		goto out;
+		if (err)
+			goto out;
 	} else if ((err = cmnd_insert_hash(cmnd)) < 0) {
 		eprintk("ignore this request %x\n", cmnd_itt(cmnd));
 		goto out;
