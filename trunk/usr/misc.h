@@ -30,6 +30,11 @@ static inline int list_empty(const struct qelem *head)
 	return head->q_forw == head;
 }
 
+static inline int list_length_is_one(const struct qelem *head)
+{
+        return head->q_forw == head->q_back;
+}
+
 #define container_of(ptr, type, member) ({			\
         const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
         (type *)( (char *)__mptr - offsetof(type,member) );})

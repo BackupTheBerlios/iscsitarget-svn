@@ -226,7 +226,6 @@ int isns_target_register(char *name)
 	uint32_t port = htonl(ISCSI_LISTEN_PORT);
 	uint32_t node = htonl(ISNS_NODE_TARGET);
 	uint32_t type = htonl(2);
-	int first = list_empty(&targets_list);
 	struct target *target;
 
 	if (!use_isns)
@@ -239,21 +238,17 @@ int isns_target_register(char *name)
 	memset(buf, 0, sizeof(buf));
 	tlv = (struct isns_tlv *) hdr->pdu;
 
-	if (first)
-	        length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NAME,
-				       strlen(name), name);
-        else {
-	        target = list_entry(targets_list.q_back, struct target, tlist);
-	        length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NAME,
-				       strlen(target->name), target->name);
-	}
+        target = list_entry(targets_list.q_back, struct target, tlist);
+        length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NAME,
+			       strlen(target->name), target->name);
+
 	length += isns_tlv_set(&tlv, ISNS_ATTR_ENTITY_IDENTIFIER,
 			       strlen(eid), eid);
 
 	length += isns_tlv_set(&tlv, 0, 0, 0);
 	length += isns_tlv_set(&tlv, ISNS_ATTR_ENTITY_IDENTIFIER,
 			       strlen(eid), eid);
-	if (first) {
+	if (list_length_is_one(&targets_list)) {
 		length += isns_tlv_set(&tlv, ISNS_ATTR_ENTITY_PROTOCOL,
 				       sizeof(type), &type);
 		length += isns_tlv_set(&tlv, ISNS_ATTR_PORTAL_IP_ADDRESS,
