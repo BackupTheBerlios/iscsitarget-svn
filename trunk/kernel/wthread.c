@@ -28,6 +28,8 @@ void wthread_queue(struct iscsi_cmnd *cmnd)
 	list_add_tail(&cmnd->list, &info->work_queue);
 	spin_unlock(&info->wthread_lock);
 
+	atomic_inc(&cmnd->conn->nr_busy_cmnds);
+
 	wake_up(&info->wthread_sleep);
 }
 
@@ -41,7 +43,6 @@ static struct iscsi_cmnd * get_ready_cmnd(struct worker_thread_info *info)
 		list_del_init(&cmnd->list);
 
 		assert(cmnd->conn);
-		atomic_inc(&cmnd->conn->nr_busy_cmnds);
 	}
 	spin_unlock(&info->wthread_lock);
 
