@@ -59,8 +59,10 @@ static void all_accounts_del(u32 tid, int dir)
 {
 	char name[ISCSI_NAME_LEN], pass[ISCSI_NAME_LEN];
 
-	for (memset(name, 0, sizeof(name));
-	     cops->account_query(tid, dir, name, pass) != -ENOENT;) {
+	memset(name, 0, sizeof(name));
+
+	for (;cops->account_query(tid, dir, name, pass) != -ENOENT;
+		memset(name, 0, sizeof(name))) {
 		cops->account_del(tid, dir, name);
 	}
 
