@@ -64,7 +64,8 @@ start()
 }
 	
 stop()
-{	echo -n "Stoping iSCSI target service: "
+{
+	echo -n "Stopping iSCSI target service: "
 	ietadm --op delete >/dev/null 2>/dev/null
 	killall ietd 2> /dev/null
 	modprobe -r iscsi_trgt 2>/dev/null
