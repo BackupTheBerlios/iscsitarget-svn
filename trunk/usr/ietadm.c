@@ -130,19 +130,21 @@ static int str_to_op(char *str)
 
 static int ietd_request_send(int fd, struct ietadm_req *req)
 {
-	int err;
+	int err, ret;
 
-	if ((err = write(fd, req, sizeof(*req))) != sizeof(*req)) {
-		fprintf(stderr, "%s %d %d\n", __FUNCTION__, __LINE__, err);
-		if (err >= 0)
-			err = -EIO;
-	}
+	if ((ret = write(fd, req, sizeof(*req))) != sizeof(*req)) {
+		err = (ret < 0) ? -errno : -EIO;
+		fprintf(stderr, "%s %d %d %d\n", __FUNCTION__, __LINE__, ret,
+			err);
+	} else
+		err = 0;
+
 	return err;
 }
 
 static int ietd_response_recv(int fd, struct ietadm_req *req)
 {
-	int err;
+	int err, ret;
 	struct iovec iov[2];
 	struct ietadm_rsp rsp;
 
@@ -151,11 +153,11 @@ static int ietd_response_recv(int fd, struct ietadm_req *req)
 	iov[1].iov_base = &rsp;
 	iov[1].iov_len = sizeof(rsp);
 
-	err = readv(fd, iov, 2);
-	if (err != sizeof(rsp) + sizeof(*req)) {
-		fprintf(stderr, "%s %d %d\n", __FUNCTION__, __LINE__, err);
-		if (err >= 0)
-			err = -EIO;
+	ret = readv(fd, iov, 2);
+	if (ret != sizeof(rsp) + sizeof(*req)) {
+		err = (ret < 0) ? -errno : -EIO;
+		fprintf(stderr, "%s %d %d %d\n", __FUNCTION__, __LINE__, ret,
+			err);
 	} else
 		err = rsp.err;
 
@@ -164,19 +166,19 @@ static int ietd_response_recv(int fd, struct ietadm_req *req)
 
 static int ietd_connect(void)
 {
-	int fd, err;
+	int fd;
 	struct sockaddr_un addr;
 
 	fd = socket(AF_LOCAL, SOCK_STREAM, 0);
 	if (fd < 0)
-		return fd;
+		return -errno;
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_LOCAL;
 	memcpy((char *) &addr.sun_path + 1, IETADM_NAMESPACE, strlen(IETADM_NAMESPACE));
 
-	if ((err = connect(fd, (struct sockaddr *) &addr, sizeof(addr))) < 0)
-		fd = err;
+	if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)))
+		fd = -errno;
 
 	return fd;
 }
@@ -200,7 +202,8 @@ out:
 		close(fd);
 
 	if (err < 0)
-		fprintf(stderr, "%s %d %d %d\n", __FUNCTION__, __LINE__, req->rcmnd, err);
+		fprintf(stderr, "%s.\n", strerror(-err));
+
 	return err;
 }
 
