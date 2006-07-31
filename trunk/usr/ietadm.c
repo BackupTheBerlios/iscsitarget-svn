@@ -301,7 +301,7 @@ static int trgt_handle(int op, u32 set, u32 tid, char *params)
 	}
 
 	err = ietd_request(&req);
-	if (req.rcmnd == C_TRGT_SHOW)
+	if (!err && req.rcmnd == C_TRGT_SHOW)
 		show_iscsi_param(key_target, req.u.trgt.target_param);
 
 out:
@@ -368,7 +368,8 @@ static int sess_handle(int op, u32 set, u32 tid, u64 sid, char *params)
 	case OP_SHOW:
 		req.rcmnd = C_SESS_SHOW;
 		err = ietd_request(&req);
-		show_iscsi_param(key_session, req.u.trgt.session_param);
+		if (!err)
+			show_iscsi_param(key_session, req.u.trgt.session_param);
 		break;
 	}
 
