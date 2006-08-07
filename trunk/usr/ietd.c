@@ -36,6 +36,8 @@ enum {
 	POLL_IPC = POLL_LISTEN + LISTEN_MAX,
 	POLL_NL,
 	POLL_ISNS,
+	POLL_SCN_LISTEN,
+	POLL_SCN,
 	POLL_INCOMING,
 	POLL_MAX = POLL_INCOMING + INCOMING_MAX,
 };
@@ -208,13 +210,17 @@ static void accept_connection(int listen)
 		poll_array[POLL_LISTEN].events = 0;
 }
 
-void isns_set_fd(int fd)
+static void __set_fd(int idx, int fd)
 {
-	poll_array[POLL_ISNS].fd = fd;
-	if (fd)
-		poll_array[POLL_ISNS].events = POLLIN;
-	else
-		poll_array[POLL_ISNS].events = 0;
+	poll_array[idx].fd = fd;
+	poll_array[idx].events = fd ? POLLIN : 0;
+}
+
+void isns_set_fd(int isns, int scn_listen, int scn)
+{
+	__set_fd(POLL_ISNS, isns);
+	__set_fd(POLL_SCN_LISTEN, scn_listen);
+	__set_fd(POLL_SCN, scn);
 }
 
 void event_loop(int timeout)
@@ -263,6 +269,12 @@ void event_loop(int timeout)
 
 		if (poll_array[POLL_ISNS].revents)
 			isns_handle(0, &timeout);
+
+		if (poll_array[POLL_SCN_LISTEN].revents)
+			isns_scn_handle(1);
+
+		if (poll_array[POLL_SCN].revents)
+			isns_scn_handle(0);
 
 		for (i = 0; i < INCOMING_MAX; i++) {
 			conn = incoming[i];

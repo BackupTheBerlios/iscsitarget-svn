@@ -188,4 +188,13 @@ struct isns_tlv {
 #define ISNS_ATTR_DD_FEATURES			2078
 #define ISNS_ATTR_DD_ID_NEXT_ID			2079
 
+/* SCN flags (6.4.4) */
+#define ISNS_SCN_FLAG_INITIATOR			(1U << 24)
+#define ISNS_SCN_FLAG_TARGET			(1U << 25)
+#define ISNS_SCN_FLAG_MANAGEMENT		(1U << 26)
+#define ISNS_SCN_FLAG_OBJECT_REMOVE		(1U << 27)
+#define ISNS_SCN_FLAG_OBJECT_ADDED		(1U << 28)
+#define ISNS_SCN_FLAG_OBJECT_UPDATED		(1U << 29)
+#define ISNS_SCN_FLAG_DD_REMOVED		(1U << 30)
+#define ISNS_SCN_FLAG_DD_ADDED			(1U << 31)
 #endif
