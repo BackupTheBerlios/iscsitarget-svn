@@ -132,6 +132,8 @@ struct target {
 
 	int max_nr_sessions;
 	int nr_sessions;
+
+	struct qelem isns_head;
 };
 
 /* chap.c */
@@ -221,6 +223,7 @@ extern int param_index_by_name(char *name, struct iscsi_key *keys);
 extern int isns_init(char *addr);
 extern int isns_handle(int is_timeout, int *timeout);
 extern int isns_scn_handle(int accept);
+extern int isns_scn_access(u32 tid, int fd, char *name);
 extern int isns_target_register(char *name);
 extern int isns_target_deregister(char *name);
 extern void isns_exit(void);

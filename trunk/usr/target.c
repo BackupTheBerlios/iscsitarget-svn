@@ -119,6 +119,7 @@ int target_add(u32 *tid, char *name)
 
 	INIT_LIST_HEAD(&target->tlist);
 	INIT_LIST_HEAD(&target->sessions_list);
+	INIT_LIST_HEAD(&target->isns_head);
 	target->tid = *tid;
 	insque(&target->tlist, &targets_list);
 

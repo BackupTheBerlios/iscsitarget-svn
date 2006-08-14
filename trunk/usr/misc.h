@@ -20,6 +20,8 @@ struct qelem {
 #endif
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
+#define LIST_HEAD(name) \
+	struct qelem name = LIST_HEAD_INIT(name)
 
 #define INIT_LIST_HEAD(ptr) do { \
 	(ptr)->q_forw = (ptr); (ptr)->q_back = (ptr); \
@@ -46,6 +48,12 @@ static inline int list_length_is_one(const struct qelem *head)
 	for (pos = list_entry((head)->q_forw, typeof(*pos), member);	\
 	     &pos->member != (head); 	\
 	     pos = list_entry(pos->member.q_forw, typeof(*pos), member))
+
+#define list_for_each_entry_safe(pos, n, head, member)			\
+	for (pos = list_entry((head)->q_forw, typeof(*pos), member),	\
+		n = list_entry(pos->member.q_forw, typeof(*pos), member);	\
+	     &pos->member != (head); 					\
+	     pos = n, n = list_entry(n->member.q_forw, typeof(*n), member))
 
 #ifndef IPV6_V6ONLY
 #define IPV6_V6ONLY	26
