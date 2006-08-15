@@ -386,6 +386,8 @@ enum cmnd_flags {
 	CMND_close,
 	CMND_lunit,
 	CMND_pending,
+	CMND_tmfabort,
+	CMND_rxstart,
 };
 
 #define set_cmnd_hashed(cmnd)	set_bit(CMND_hashed, &(cmnd)->flags)
@@ -410,6 +412,11 @@ enum cmnd_flags {
 #define clear_cmnd_pending(cmnd)	clear_bit(CMND_pending, &(cmnd)->flags)
 #define cmnd_pending(cmnd)	test_bit(CMND_pending, &(cmnd)->flags)
 
+#define set_cmnd_tmfabort(cmnd)	set_bit(CMND_tmfabort, &(cmnd)->flags)
+#define cmnd_tmfabort(cmnd)	test_bit(CMND_tmfabort, &(cmnd)->flags)
+
+#define set_cmnd_rxstart(cmnd)	set_bit(CMND_rxstart, &(cmnd)->flags)
+#define cmnd_rxstart(cmnd)	test_bit(CMND_rxstart, &(cmnd)->flags)
 
 #define VENDOR_ID	"IET"
 #define PRODUCT_ID	"VIRTUAL-DISK"

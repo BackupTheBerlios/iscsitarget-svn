@@ -1111,11 +1111,17 @@ out:
 
 static int __cmnd_abort(struct iscsi_cmnd *cmnd)
 {
-	if (!cmnd_waitio(cmnd)) {
-		cmnd_release(cmnd, 1);
-		return 0;
-	} else
+	if (cmnd_waitio(cmnd))
 		return -ISCSI_RESPONSE_UNKNOWN_TASK;
+
+	if (cmnd->conn->read_cmnd != cmnd)
+		cmnd_release(cmnd, 1);
+	else if (cmnd_rxstart(cmnd))
+		set_cmnd_tmfabort(cmnd);
+	else
+		return -ISCSI_RESPONSE_UNKNOWN_TASK;
+
+	return 0;
 }
 
 static int cmnd_abort(struct iscsi_session *session, u32 itt)
@@ -1583,6 +1589,7 @@ void cmnd_rx_start(struct iscsi_cmnd *cmnd)
 
 	iscsi_dump_pdu(&cmnd->pdu);
 
+	set_cmnd_rxstart(cmnd);
 	if (check_segment_length(cmnd) < 0)
 		return;
 
@@ -1621,6 +1628,11 @@ void cmnd_rx_start(struct iscsi_cmnd *cmnd)
 void cmnd_rx_end(struct iscsi_cmnd *cmnd)
 {
 	struct iscsi_conn *conn = cmnd->conn;
+
+	if (cmnd_tmfabort(cmnd)) {
+		cmnd_release(cmnd, 1);
+		return;
+	}
 
 	dprintk(D_GENERIC, "%p:%x\n", cmnd, cmnd_opcode(cmnd));
 	switch (cmnd_opcode(cmnd)) {
