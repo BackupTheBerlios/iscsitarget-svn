@@ -266,9 +266,8 @@ static int isns_scn_register(void)
 			       strlen(target->name), target->name);
 	length += isns_tlv_set(&tlv, 0, 0, 0);
 
-	scn_flags = ISNS_SCN_FLAG_INITIATOR | ISNS_SCN_FLAG_TARGET |
-		ISNS_SCN_FLAG_OBJECT_REMOVE | ISNS_SCN_FLAG_OBJECT_ADDED |
-		ISNS_SCN_FLAG_OBJECT_UPDATED;
+	scn_flags = ISNS_SCN_FLAG_INITIATOR | ISNS_SCN_FLAG_OBJECT_REMOVE |
+		ISNS_SCN_FLAG_OBJECT_ADDED | ISNS_SCN_FLAG_OBJECT_UPDATED;
 	scn_flags = htonl(set_scn_flag(scn_flags));
 
 	length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_SCN_BITMAP,
@@ -292,7 +291,7 @@ static int isns_attr_query(char *name)
 	struct isns_hdr *hdr = (struct isns_hdr *) buf;
 	struct isns_tlv *tlv;
 	struct target *target;
-	uint32_t node = htonl(ISNS_NODE_TARGET);
+	uint32_t node = htonl(ISNS_NODE_INITIATOR);
 	struct isns_qry_mgmt *mgmt;
 
 	if (list_empty(&targets_list))
@@ -319,10 +318,11 @@ static int isns_attr_query(char *name)
 	}
 
 	length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NAME, strlen(name), name);
-	length += isns_tlv_set(&tlv, 0, 0, 0);
-	length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NAME, 0, 0);
 	length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NODE_TYPE,
 			       sizeof(node), &node);
+	length += isns_tlv_set(&tlv, 0, 0, 0);
+	length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NAME, 0, 0);
+	length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NODE_TYPE, 0, 0);
 	length += isns_tlv_set(&tlv, ISNS_ATTR_PORTAL_IP_ADDRESS, 0, 0);
 
 	flags = ISNS_FLAG_CLIENT | ISNS_FLAG_LAST_PDU | ISNS_FLAG_FIRST_PDU;
@@ -377,7 +377,7 @@ static int isns_deregister(void)
 int isns_target_register(char *name)
 {
 	char buf[4096];
-	uint16_t flags, length = 0;
+	uint16_t flags = 0, length = 0;
 	struct isns_hdr *hdr = (struct isns_hdr *) buf;
 	struct isns_tlv *tlv;
 	uint32_t port = htonl(ISCSI_LISTEN_PORT);
@@ -407,13 +407,13 @@ int isns_target_register(char *name)
 	length += isns_tlv_set(&tlv, ISNS_ATTR_ENTITY_IDENTIFIER,
 			       strlen(eid), eid);
 	if (initial) {
-
 		length += isns_tlv_set(&tlv, ISNS_ATTR_ENTITY_PROTOCOL,
 				       sizeof(type), &type);
 		length += isns_tlv_set(&tlv, ISNS_ATTR_PORTAL_IP_ADDRESS,
 				       sizeof(ip), &ip);
 		length += isns_tlv_set(&tlv, ISNS_ATTR_PORTAL_PORT,
 				       sizeof(port), &port);
+		flags = ISNS_FLAG_REPLACE;
 
 		if (scn_listen_port) {
 			uint32_t sport = htonl(scn_listen_port);
@@ -426,7 +426,7 @@ int isns_target_register(char *name)
 	length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NODE_TYPE,
 			       sizeof(node), &node);
 
-	flags = ISNS_FLAG_CLIENT | ISNS_FLAG_LAST_PDU | ISNS_FLAG_FIRST_PDU;
+	flags |= ISNS_FLAG_CLIENT | ISNS_FLAG_LAST_PDU | ISNS_FLAG_FIRST_PDU;
 	isns_hdr_init(hdr, ISNS_FUNC_DEV_ATTR_REG, length, flags,
 		      ++transaction, 0);
 
@@ -680,9 +680,9 @@ found:
 
 	free_all_acl(target);
 
-	/* skip status and delimiter */
-	tlv = (struct isns_tlv *) ((char *) hdr->pdu + 12);
-	length -= 12;
+	/* skip status */
+	tlv = (struct isns_tlv *) ((char *) hdr->pdu + 4);
+	length -= 4;
 
 	while (length) {
 		uint32_t vlen = ntohl(tlv->length);
@@ -772,6 +772,7 @@ static int scn_accept_connection(void)
 	socklen_t slen;
 	int fd, err, opt = 1;
 
+	slen = sizeof(from);
 	fd = accept(scn_listen_fd, (struct sockaddr *) &from, &slen);
 	if (fd < 0) {
 		log_error("%s %d: accept error %s", __FUNCTION__, __LINE__,
@@ -790,6 +791,28 @@ static int scn_accept_connection(void)
 	isns_set_fd(isns_fd, scn_listen_fd, scn_fd);
 
 	return 0;
+}
+
+static void send_scn_rsp(char *name)
+{
+	char buf[1024];
+	struct isns_hdr *hdr = (struct isns_hdr *) buf;
+	struct isns_tlv *tlv;
+	uint16_t flags, length = 0;
+	int err;
+
+	*((uint32_t *) hdr->pdu) = 0;
+	tlv = (struct isns_tlv *) ((char *) hdr->pdu + 4);
+	length +=4;
+
+	length += isns_tlv_set(&tlv, ISNS_ATTR_ISCSI_NAME, strlen(name), name);
+
+	flags = ISNS_FLAG_CLIENT | ISNS_FLAG_LAST_PDU | ISNS_FLAG_FIRST_PDU;
+	isns_hdr_init(hdr, ISNS_FUNC_SCN_RSP, length, flags, transaction, 0);
+
+	err = write(scn_fd, buf, length + sizeof(struct isns_hdr));
+	if (err < 0)
+		log_error("%s %d: %s", __FUNCTION__, __LINE__, strerror(errno));
 }
 
 int isns_scn_handle(int is_accept)
@@ -829,6 +852,11 @@ int isns_scn_handle(int is_accept)
 		break;
 	default:
 		print_unknown_pdu(hdr);
+	}
+
+	if (name) {
+		send_scn_rsp(name);
+		isns_attr_query(name);
 	}
 
 	return 0;
