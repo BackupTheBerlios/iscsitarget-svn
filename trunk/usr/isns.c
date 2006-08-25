@@ -57,7 +57,8 @@ static uint16_t scn_listen_port;
 static int use_isns, isns_fd, scn_listen_fd, scn_fd;
 static struct isns_io isns_rx, scn_rx;
 static char *rxbuf;
-static uint32_t transaction, current_timeout = 30; /* seconds */
+static uint16_t transaction;
+static uint32_t current_timeout = 30; /* seconds */
 static char eid[ISCSI_NAME_LEN];
 static uint8_t ip[16]; /* IET supoprts only one portal */
 static struct sockaddr_storage ss;
@@ -793,7 +794,7 @@ static int scn_accept_connection(void)
 	return 0;
 }
 
-static void send_scn_rsp(char *name)
+static void send_scn_rsp(char *name, uint16_t transaction)
 {
 	char buf[1024];
 	struct isns_hdr *hdr = (struct isns_hdr *) buf;
@@ -801,6 +802,7 @@ static void send_scn_rsp(char *name)
 	uint16_t flags, length = 0;
 	int err;
 
+	memset(buf, 0, sizeof(buf));
 	*((uint32_t *) hdr->pdu) = 0;
 	tlv = (struct isns_tlv *) ((char *) hdr->pdu + 4);
 	length +=4;
@@ -845,17 +847,13 @@ int isns_scn_handle(int is_accept)
 	switch (function) {
 	case ISNS_FUNC_SCN:
 		name = print_scn_pdu(hdr);
-		if (name) {
-			log_error("%s %d: %s", __FUNCTION__, __LINE__, name);
-			isns_attr_query(name);
-		}
 		break;
 	default:
 		print_unknown_pdu(hdr);
 	}
 
 	if (name) {
-		send_scn_rsp(name);
+		send_scn_rsp(name, transaction);
 		isns_attr_query(name);
 	}
 
