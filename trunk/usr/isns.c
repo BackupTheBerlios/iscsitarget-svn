@@ -422,7 +422,7 @@ int isns_target_register(char *name)
 	if (err < 0)
 		log_error("%s %d: %s", __FUNCTION__, __LINE__, strerror(errno));
 
-	if (initial && scn_listen_port)
+	if (scn_listen_port)
 		isns_scn_register();
 
 	isns_attr_query(name);
