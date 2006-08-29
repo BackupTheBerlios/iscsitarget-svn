@@ -368,8 +368,8 @@ static void login_start(struct connection *conn)
 		}
 
 		if (!(conn->tid = target_find_by_name(target_name)) ||
-		    cops->initiator_access(conn->tid, conn->fd) < 0 ||
-		    isns_scn_access(conn->tid, conn->fd, name) < 0) {
+		    cops->initiator_access(conn->tid, conn->fd) ||
+		    isns_scn_access(conn->tid, conn->fd, name)) {
 			rsp->status_class = ISCSI_STATUS_INITIATOR_ERR;
 			rsp->status_detail = ISCSI_STATUS_TGT_NOT_FOUND;
 			conn->state = STATE_EXIT;

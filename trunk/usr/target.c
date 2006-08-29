@@ -23,7 +23,8 @@ void target_list_build(struct connection *conn, char *addr, char *name)
 	list_for_each_entry(target, &targets_list, tlist) {
 		if (name && strcmp(target->name, name))
 			continue;
-		if (cops->initiator_access(target->tid, conn->fd) < 0)
+		if (cops->initiator_access(target->tid, conn->fd) ||
+		    isns_scn_access(target->tid, conn->fd, conn->initiator))
 			continue;
 
 		text_key_add(conn, "TargetName", target->name);
