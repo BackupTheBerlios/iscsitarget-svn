@@ -76,15 +76,23 @@ static int fileio_sync(struct iet_volume *lu, struct tio *tio)
 	struct fileio_data *p = (struct fileio_data *) lu->private;
 	struct inode *inode = p->filp->f_dentry->d_inode;
 	struct address_space *mapping = inode->i_mapping;
-	loff_t ppos = (loff_t) tio->idx << PAGE_CACHE_SHIFT;
+	loff_t ppos, count;
 	int res;
 
-	res = sync_page_range(inode, mapping, ppos, (size_t) tio->size);
+	if (tio) {
+		ppos = (loff_t) tio->idx << PAGE_CACHE_SHIFT;
+		count = tio->size;
+	} else {
+		ppos = 0;
+		count = lu->blk_cnt << lu->blk_shift;
+	}
+
+	res = sync_page_range(inode, mapping, ppos, count);
 	if (res) {
 		eprintk("I/O error: syncing pages failed: %d\n", res);
 		return -EIO;
-	}
-	return 0;
+	} else
+		return 0;
 }
 
 static int open_path(struct iet_volume *volume, const char *path)
@@ -93,6 +101,7 @@ static int open_path(struct iet_volume *volume, const char *path)
 	struct fileio_data *info = (struct fileio_data *) volume->private;
 	struct file *filp;
 	mm_segment_t oldfs;
+	int flags;
 
 	info->path = kmalloc(strlen(path) + 1, GFP_KERNEL);
 	if (!info->path)
@@ -102,7 +111,8 @@ static int open_path(struct iet_volume *volume, const char *path)
 
 	oldfs = get_fs();
 	set_fs(get_ds());
-	filp = filp_open(path, O_RDWR|O_LARGEFILE, 0);
+	flags = (LUReadonly(volume) ? O_RDONLY : O_RDWR) | O_LARGEFILE;
+	filp = filp_open(path, flags, 0);
 	set_fs(oldfs);
 
 	if (IS_ERR(filp)) {
@@ -156,6 +166,7 @@ static match_table_t tokens = {
 	{Opt_scsiid, "ScsiId=%s"},
 	{Opt_path, "Path=%s"},
 	{Opt_ignore, "Type=%s"},
+	{Opt_ignore, "IOMode=%s"},
 	{Opt_err, NULL},
 };
 

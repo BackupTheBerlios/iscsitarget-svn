@@ -140,9 +140,22 @@ struct iet_volume {
 	u32 blk_shift;
 	u64 blk_cnt;
 
+	unsigned long flags;
+
 	struct iotype *iotype;
 	void *private;
 };
+
+enum lu_flags {
+	LU_READONLY,
+	LU_ASYNC,
+};
+
+#define LUReadonly(lu) test_bit(LU_READONLY, &(lu)->flags)
+#define SetLUReadonly(lu) set_bit(LU_READONLY, &(lu)->flags)
+
+#define LUAsync(lu) test_bit(LU_ASYNC, &(lu)->flags)
+#define SetLUAsync(lu) set_bit(LU_ASYNC, &(lu)->flags)
 
 #define IET_HASH_ORDER		8
 #define	cmnd_hashfn(itt)	hash_long((itt), IET_HASH_ORDER)

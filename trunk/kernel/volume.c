@@ -22,11 +22,14 @@ struct iet_volume *volume_lookup(struct iscsi_target *target, u32 lun)
 }
 
 enum {
-	Opt_type, Opt_err,
+	Opt_type,
+	Opt_iomode,
+	Opt_err,
 };
 
 static match_table_t tokens = {
 	{Opt_type, "Type=%s"},
+	{Opt_iomode, "IOMode=%s"},
 	{Opt_err, NULL},
 };
 
@@ -34,7 +37,7 @@ static int set_iotype(struct iet_volume *volume, char *params)
 {
 	int err = 0;
 	substring_t args[MAX_OPT_ARGS];
-	char *p, *type = NULL, *buf = (char *) get_zeroed_page(GFP_USER);
+	char *p, *argp = NULL, *buf = (char *) get_zeroed_page(GFP_USER);
 
 	if (!buf)
 		return -ENOMEM;
@@ -48,11 +51,20 @@ static int set_iotype(struct iet_volume *volume, char *params)
 		token = match_token(p, tokens, args);
 		switch (token) {
 		case Opt_type:
-			if (!(type = match_strdup(&args[0])))
+			if (!(argp = match_strdup(&args[0])))
 				err = -ENOMEM;
-
-			if (type && !(volume->iotype = get_iotype(type)))
+			if (argp && !(volume->iotype = get_iotype(argp)))
 				err = -ENOENT;
+			kfree(argp);
+			break;
+		case Opt_iomode:
+			if (!(argp = match_strdup(&args[0])))
+				err = -ENOMEM;
+			if (argp && !strcmp(argp, "ro"))
+				SetLUReadonly(volume);
+			else if (argp && !strcmp(argp, "wb"))
+				SetLUAsync(volume);
+			kfree(argp);
 			break;
 		default:
 			break;
@@ -65,7 +77,6 @@ static int set_iotype(struct iet_volume *volume, char *params)
 	}
 
 	free_page((unsigned long) buf);
-	kfree(type);
 
 	return err;
 }
@@ -165,6 +176,12 @@ static void iet_volume_info_show(struct seq_file *seq, struct iscsi_target *targ
 	list_for_each_entry(volume, &target->volumes, list) {
 		seq_printf(seq, "\tlun:%u state:%x iotype:%s",
 			   volume->lun, volume->l_state, volume->iotype->name);
+		if (LUReadonly(volume))
+			seq_printf(seq, " iomode:ro");
+		else if (LUAsync(volume))
+			seq_printf(seq, " iomode:wb");
+		else
+			seq_printf(seq, " iomode:wt");
 		if (volume->iotype->show)
 			volume->iotype->show(volume, seq);
 		else

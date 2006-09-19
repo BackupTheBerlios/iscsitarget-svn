@@ -21,13 +21,15 @@ static int insert_disconnect_pg(u8 *ptr)
 	return sizeof(disconnect_pg);
 }
 
-static int insert_caching_pg(u8 *ptr)
+static int insert_caching_pg(u8 *ptr, int async)
 {
 	unsigned char caching_pg[] = {0x08, 0x12, 0x10, 0x00, 0xff, 0xff, 0x00, 0x00,
 				      0xff, 0xff, 0xff, 0xff, 0x80, 0x14, 0x00, 0x00,
 				      0x00, 0x00, 0x00, 0x00};
 
 	memcpy(ptr, caching_pg, sizeof(caching_pg));
+	if (async)
+		ptr[2] |= 0x04;	/* set WCE bit if we're caching writes */
 	return sizeof(caching_pg);
 }
 
@@ -89,6 +91,9 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 	assert(data);
 	clear_page(data);
 
+	if (LUReadonly(cmnd->lun))
+		data[2] = 0x80;
+
 	if ((scb[1] & 0x8))
 		data[3] = 0;
 	else {
@@ -112,7 +117,7 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 		len += insert_geo_m_pg(data + len, cmnd->lun->blk_cnt);
 		break;
 	case 0x8:
-		len += insert_caching_pg(data + len);
+		len += insert_caching_pg(data + len, LUAsync(cmnd->lun));
 		break;
 	case 0xa:
 		len += insert_ctrl_m_pg(data + len);
@@ -124,7 +129,7 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 		len += insert_disconnect_pg(data + len);
 		len += insert_format_m_pg(data + len);
 		len += insert_geo_m_pg(data + len, cmnd->lun->blk_cnt);
-		len += insert_caching_pg(data + len);
+		len += insert_caching_pg(data + len, LUAsync(cmnd->lun));
 		len += insert_ctrl_m_pg(data + len);
 		len += insert_iec_m_pg(data + len);
 		break;
@@ -338,16 +343,21 @@ static int build_write_response(struct iscsi_cmnd *cmnd)
 	int err;
 	struct tio *tio = cmnd->tio;
 
-	assert(cmnd);
 	assert(tio);
 	assert(cmnd->lun);
 
 	list_del_init(&cmnd->list);
 	err = tio_write(cmnd->lun, tio);
-	if (!err)
+	if (!err && !LUAsync(cmnd->lun))
 		err = tio_sync(cmnd->lun, tio);
 
 	return err;
+}
+
+static int build_sync_cache_response(struct iscsi_cmnd *cmnd)
+{
+	assert(cmnd->lun);
+	return tio_sync(cmnd->lun, NULL);
 }
 
 static int build_generic_response(struct iscsi_cmnd *cmnd)
@@ -391,9 +401,11 @@ static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 	case WRITE_VERIFY:
 		send_scsi_rsp(cmnd, build_write_response);
 		break;
+	case SYNCHRONIZE_CACHE:
+		send_scsi_rsp(cmnd, build_sync_cache_response);
+		break;
 	case START_STOP:
 	case TEST_UNIT_READY:
-	case SYNCHRONIZE_CACHE:
 	case VERIFY:
 	case VERIFY_16:
 	case RESERVE:

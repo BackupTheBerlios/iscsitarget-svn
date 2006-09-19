@@ -977,6 +977,12 @@ static void scsi_cmnd_start(struct iscsi_conn *conn, struct iscsi_cmnd *req)
 		req->is_unsolicited_data = !(req_hdr->flags & ISCSI_CMD_FINAL);
 		req->target_task_tag = get_next_ttt(conn->session);
 
+		if (LUReadonly(req->lun)) {
+			create_sense_rsp(req, DATA_PROTECT, 0x27, 0x0);
+			cmnd_skip_data(req);
+			break;
+		}
+
 		if (!param->immediate_data && req->pdu.datasize)
 			eprintk("%x %x\n", cmnd_itt(req), req_hdr->scb[0]);
 
