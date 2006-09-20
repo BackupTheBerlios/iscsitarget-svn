@@ -57,7 +57,6 @@ static struct option const long_options[] =
 	{"config", required_argument, 0, 'c'},
 	{"foreground", no_argument, 0, 'f'},
 	{"debug", required_argument, 0, 'd'},
-	{"isns", required_argument, 0, 's'},
 	{"uid", required_argument, 0, 'u'},
 	{"gid", required_argument, 0, 'g'},
 	{"address", required_argument, 0, 'a'},
@@ -83,7 +82,6 @@ iSCSI target daemon.\n\
 		printf("\
   -f, --foreground        make the program run in the foreground\n\
   -d, --debug debuglevel  print debugging information\n\
-  -s, --isns=[ip]         work with isns server, default is disabled\n\
   -u, --uid=uid           run as uid, default is current user\n\
   -g, --gid=gid           run as gid, default is current user group\n\
   -a, --address=address   listen on specified local address instead of all\n\
@@ -430,9 +428,6 @@ int main(int argc, char **argv)
 		case 'd':
 			log_level = atoi(optarg);
 			break;
-		case 's':
-			isns = optarg;
-			break;
 		case 'u':
 			uid = strtoul(optarg, NULL, 10);
 			break;
@@ -507,10 +502,11 @@ int main(int argc, char **argv)
 		setsid();
 	}
 
+	cops->init(config, &isns);
 	if (isns)
 		timeout = isns_init(isns);
 
-	cops->init(config);
+	cops->default_load(config);
 
 	if (gid && setgid(gid) < 0)
 		perror("setgid\n");

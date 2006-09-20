@@ -2,7 +2,8 @@
 #define CONFIG_H
 
 struct config_operations {
-	int (*init) (char *);
+	int (*init) (char *, char **);
+	int (*default_load) (char *);
 	int (*target_add) (u32 *, char *);
 	int (*target_stop) (u32);
 	int (*target_del) (u32);

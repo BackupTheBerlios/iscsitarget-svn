@@ -558,7 +558,7 @@ static int plain_main_init(char *filename)
 	return 0;
 }
 
-static int plain_init(char *params)
+static int plain_default_load(char *params)
 {
 	int i, err;
 
@@ -579,8 +579,30 @@ static int plain_init(char *params)
 	return err;
 }
 
+static int plain_init(char *params, char **isns)
+{
+	FILE *config;
+	char buf[BUFSIZE];
+	char *p, *q;
+
+	if (!(config = fopen(params ? : CONFIG_FILE, "r")))
+		return -errno;
+
+	while (fgets(buf, BUFSIZE, config)) {
+		q = buf;
+		p = target_sep_string(&q);
+		if (!p || *p == '#')
+			continue;
+		if (!strcasecmp(p, "iSNSServer"))
+			*isns = strdup(target_sep_string(&q));
+	}
+
+	return 0;
+}
+
 struct config_operations plain_ops = {
 	.init			= plain_init,
+	.default_load		= plain_default_load,
 	.target_add		= plain_target_create,
 	.target_del		= plain_target_destroy,
 	.lunit_add		= plain_lunit_create,

@@ -910,7 +910,7 @@ int isns_init(char *addr)
 	hints.ai_socktype = SOCK_STREAM;
 	err = getaddrinfo(addr, (char *) &port, &hints, &res);
 	if (err) {
-		log_error("getaddrinfo error %s!", gai_strerror(err));
+		log_error("getaddrinfo error %s, %s", gai_strerror(err), addr);
 		return -1;
 	}
 	memcpy(&ss, res->ai_addr, sizeof(ss));
