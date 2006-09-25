@@ -54,7 +54,7 @@ struct isns_initiator {
 
 static LIST_HEAD(qry_list);
 static uint16_t scn_listen_port;
-static int use_isns, isns_fd, scn_listen_fd, scn_fd;
+static int use_isns, use_isns_ac, isns_fd, scn_listen_fd, scn_fd;
 static struct isns_io isns_rx, scn_rx;
 static char *rxbuf;
 static uint16_t transaction;
@@ -68,7 +68,7 @@ int isns_scn_access(uint32_t tid, int fd, char *name)
 	struct isns_initiator *ini;
 	struct target *target = target_find_by_id(tid);
 
-	if (!use_isns)
+	if (!use_isns || !use_isns_ac)
 		return 0;
 
 	if (!target)
@@ -899,7 +899,7 @@ out:
 	return err;
 }
 
-int isns_init(char *addr)
+int isns_init(char *addr, int isns_ac)
 {
 	int err;
 	char port[8];
@@ -930,6 +930,7 @@ int isns_init(char *addr)
 	scn_rx.offset = 0;
 
 	use_isns = 1;
+	use_isns_ac = isns_ac;
 
 	return current_timeout * 1000;
 }

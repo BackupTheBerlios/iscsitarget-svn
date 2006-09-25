@@ -220,7 +220,7 @@ extern int nl_open(void);
 extern int param_index_by_name(char *name, struct iscsi_key *keys);
 
 /* isns.c */
-extern int isns_init(char *addr);
+extern int isns_init(char *addr, int isns_ac);
 extern int isns_handle(int is_timeout, int *timeout);
 extern int isns_scn_handle(int accept);
 extern int isns_scn_access(u32 tid, int fd, char *name);

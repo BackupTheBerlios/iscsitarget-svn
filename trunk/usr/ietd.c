@@ -416,6 +416,7 @@ int main(int argc, char **argv)
 	uid_t uid = 0;
 	gid_t gid = 0;
 	char *isns = NULL;
+	int isns_ac = 0;
 
 	while ((ch = getopt_long(argc, argv, "c:fd:s:u:g:a:p:vh", long_options, &longindex)) >= 0) {
 		switch (ch) {
@@ -502,9 +503,9 @@ int main(int argc, char **argv)
 		setsid();
 	}
 
-	cops->init(config, &isns);
+	cops->init(config, &isns, &isns_ac);
 	if (isns)
-		timeout = isns_init(isns);
+		timeout = isns_init(isns, isns_ac);
 
 	cops->default_load(config);
 

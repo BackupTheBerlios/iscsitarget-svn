@@ -579,7 +579,7 @@ static int plain_default_load(char *params)
 	return err;
 }
 
-static int plain_init(char *params, char **isns)
+static int plain_init(char *params, char **isns, int *isns_ac)
 {
 	FILE *config;
 	char buf[BUFSIZE];
@@ -593,8 +593,13 @@ static int plain_init(char *params, char **isns)
 		p = target_sep_string(&q);
 		if (!p || *p == '#')
 			continue;
-		if (!strcasecmp(p, "iSNSServer"))
+		if (!strcasecmp(p, "iSNSServer")) {
 			*isns = strdup(target_sep_string(&q));
+		} else if (!strcasecmp(p, "iSNSAccessControl")) {
+			char *str = target_sep_string(&q);
+			if (!strcasecmp(str, "Yes"))
+				*isns_ac = 1;
+		}
 	}
 
 	return 0;
