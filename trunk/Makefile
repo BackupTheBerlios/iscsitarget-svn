@@ -37,7 +37,7 @@ install: kernel/iscsi_trgt.ko usr/ietd usr/ietadm
 	else \
 		install -vD -m 755 etc/initd/initd $(DISTDIR)/etc/init.d/iscsi-target; \
 	fi
-	@eval `sed -n 's/#define UTS_RELEASE /KERNELRELEASE=/p' $(KSRC)/include/linux/version.h`; \
+	@eval `sed -n 's/#define UTS_RELEASE /KERNELRELEASE=/p' $(KSRC)/include/linux/version.h $(KSRC)/include/linux/utsrelease.h 2>/dev/null`; \
 	install -vD kernel/iscsi_trgt.ko \
 	$(DISTDIR)$(INSTALL_MOD_PATH)/lib/modules/$$KERNELRELEASE/kernel/iscsi/iscsi_trgt.ko
 	-depmod -aq
