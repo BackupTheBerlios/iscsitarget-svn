@@ -124,7 +124,7 @@ has to be provided, if there is a
 .I <username>
 given.
 .TP 
-.B Lun <lun> Path=<device>[,Type=fileio][,ScsiId=<scsi_id>] | Sectors=<size>,Type=nullio
+.B Lun <lun> (Path=<device>[,Type=fileio][,ScsiId=<scsi_id>] | Sectors=<size>,Type=nullio)[,IOMode=(wb|ro)]
 In
 .I fileio
 mode (default), it defines a mapping between a "Logical Unit Number" 
@@ -146,8 +146,13 @@ mode, it defines a mapping between a "Logical Unit Number"
 and an unnamed virtual device with
 .I <size>
 sectors. This is ONLY useful for performance measurement purposes. All writes to this virtual device will be discarded and reads will return random data.
-.br 
-
+.br
+By default, LUNs are writable, employing write-through caching. By setting
+.I IOMode
+to "ro" a LUN can only be accessed read only. Setting
+.I IOMode
+to "wb" will enable write-back caching. Please note that this could lead to data loss e.g. in case of power outages, so it is strongly recommended to use an UPS when enabling write-back caching.
+.br
 This line must occur at least once. The value of
 .I <lun>
 can be between 0 and 2^14\-1.
