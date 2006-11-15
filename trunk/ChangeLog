@@ -1,3 +1,68 @@
+Summary of changes from v0.4.13 to v0.4.14
+=================================
+
+Arne Redlich
+  o Kill unused "state" in struct iscsi_cmnd.
+  o Fixed fileio_sync() to propagate error to the caller (and initiator).
+  o Don't attempt to show target/session params if communication with ietd
+  fails.
+  o Fixes to ietadm parameters handling.
+
+FUJITA Tomonori
+  o rewritten iSNS code, many iSNS fixes.
+  o added iSNS SCN support.
+  o IPv6 fixes to userspace.
+  
+Ming Zhang
+  o Fix the READ_* commands error handling bug.
+  o fix the mode sense response.
+  o wrong #endif sequence in misc.h
+
+Richard Bollinger
+  o add a patch to ietd.c that allows defunct sessions to go away.
+  o add write-back cache and read-only support.
+
+Frederic Temporelli
+  o Fix for the combination of 32-bit userland and 64-bit kernel on mips.
+
+Henry Liu
+  o corrected many task management functions, prevent crashing on
+  LUN RESET, TARGET WARM RESET.
+
+K Chapman
+  o Fixed a typo in check_segment_length().
+
+Emmanuel Florac
+  o Add ietadm manpage.
+
+
+Summary of changes from v0.4.12 to v0.4.13
+=================================
+Arne Redlich
+  o patch to avoid digest calculation for PDUs whose data has been skipped 
+  already for various reasons.
+  o Correct a bug managing non-default MaxRxDSL.
+  o added to ietadm ability to show target parameters.
+  o add on the workaround to AIX initiator MaxCmdSN bug.
+
+FUJITA Tomonori
+  o added to ietadm ability to show the iSCSI parameters for an established 
+  session.
+
+Ming Zhang
+  o Fixed this bug : ietd should manage the iscsi name in a case insensitive
+  way to conform to the RFC.
+  o workaround to AIX initiator MaxCmdSN bug.
+  o Fixed socket() return value judgment.
+  
+Bastiaan Bakker
+  o add 'condrestart' command to the RedHat initscript.
+
+Robert Whitehead
+  o correct the bug that prevents iet to start if there isn't 
+  an /etc/ietd.conf file.
+  
+
 Summary of changes from v0.4.11 to v0.4.12
 =================================
 
