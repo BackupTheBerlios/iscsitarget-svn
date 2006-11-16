@@ -297,7 +297,7 @@ static int iscsi_param_get(u32 tid, u64 sid, int type, struct iscsi_param *param
 	info.param_type = type;
 
 	if ((err = ioctl(ctrl_fd, ISCSI_PARAM_GET, &info)) < 0)
-		log_error("Can't set session param %d %d\n", info.tid, errno);
+		log_error("Can't get session param %d %d\n", info.tid, errno);
 
 	if (type == key_session)
 		for (i = 0; i < session_key_last; i++)
