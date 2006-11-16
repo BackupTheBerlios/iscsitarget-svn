@@ -297,7 +297,9 @@ static long ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case GET_CONN_INFO:
 		err = get_conn_info(target, arg);
 		break;
-
+	default:
+		eprintk("invalid ioctl cmd %x\n", cmd);
+		err = -EINVAL;
 	}
 
 	if (target)
