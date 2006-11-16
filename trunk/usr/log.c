@@ -18,7 +18,7 @@ int log_level = 0;
 void log_init(void)
 {
 	if (log_daemon)
-		openlog("iscsid", 0, LOG_DAEMON);
+		openlog("ietd", 0, LOG_DAEMON);
 }
 
 static void dolog(int prio, const char *fmt, va_list ap)
