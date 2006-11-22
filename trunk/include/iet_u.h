@@ -12,6 +12,10 @@
 #define VENDOR_ID_LEN	8
 #define SCSI_ID_LEN	24
 
+#ifndef aligned_u64
+#define aligned_u64 unsigned long long __attribute__((aligned(8)))
+#endif
+
 struct target_info {
 	u32 tid;
 	char name[ISCSI_NAME_LEN];
@@ -27,7 +31,7 @@ struct volume_info {
 struct session_info {
 	u32 tid;
 
-	u64 sid;
+	aligned_u64 sid;
 	char initiator_name[ISCSI_NAME_LEN];
 	u32 exp_cmd_sn;
 	u32 max_cmd_sn;
@@ -39,7 +43,7 @@ struct session_info {
 
 struct conn_info {
 	u32 tid;
-	u64 sid;
+	aligned_u64 sid;
 
 	u32 cid;
 	u32 stat_sn;
@@ -86,7 +90,7 @@ enum {
 
 struct iscsi_param_info {
 	u32 tid;
-	u64 sid;
+	aligned_u64 sid;
 
 	u32 param_type;
 	u32 partial;
@@ -101,7 +105,7 @@ enum iet_event_state {
 
 struct iet_event {
 	u32 tid;
-	u64 sid;
+	aligned_u64 sid;
 	u32 cid;
 	u32 state;
 };
