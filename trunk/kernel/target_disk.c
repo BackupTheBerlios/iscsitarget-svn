@@ -7,6 +7,7 @@
  *   licensed under the terms of the GNU GPL v2.0,
  */
 
+#include <linux/ctype.h>
 #include <scsi/scsi.h>
 
 #include "iscsi.h"
@@ -199,11 +200,24 @@ static int build_inquiry_response(struct iscsi_cmnd *cmnd)
 			tio_set(tio, 7, 0);
 			err = 0;
 		} else if (scb[2] == 0x80) {
+			int len = SCSI_ID_LEN - VENDOR_ID_LEN;
+
 			data[1] = 0x80;
-			data[3] = 4;
-			memset(data + 4, 0x20, 4);
-			tio_set(tio, 8, 0);
+			data[3] = len;
+			memset(data + 4, 0x20, len);
+			tio_set(tio, len + 4, 0);
 			err = 0;
+
+			if (cmnd->lun) {
+				char *p, *q;
+
+				p = data + 4 + len - 1;
+				q = cmnd->lun->scsi_id + SCSI_ID_LEN - 1;
+
+				for (; len > 0; len--, q--)
+					if (isascii(*q) && isprint(*q))
+						*(p--) = *q;
+			}
 		} else if (scb[2] == 0x83) {
 			u32 len = SCSI_ID_LEN * sizeof(u8);
 
