@@ -11,11 +11,11 @@
 .B ietd (8)
 command. This is the place, where you configure your iSCSI targets and daemon defaults.
 .P
-Lines starting with `#' are ignored. A line may be extended across multiple lines by making the last character a backslash.
+Only lines starting with `#' are ignored. Putting '#' in the middle of a line is disallowed. A line may be extended across multiple lines by making the last character a backslash.
 .P
 The "Yes" and "No" for parameter values are case sensitive. The parameter names are case insensitive.
 .P
-The file consists  of a global part and zero or more "Target" stanzas. Everything until the first target definition belongs to the global configuration. 
+The file consists of a global part and zero or more "Target" stanzas. Everything until the first target definition belongs to the global configuration. 
 
 Here is an example:
 
@@ -125,6 +125,8 @@ has to be provided, if there is a
 given.
 .TP 
 .B Lun <lun> (Path=<device>[,Type=fileio][,ScsiId=<scsi_id>] | Sectors=<size>,Type=nullio)[,IOMode=(wb|ro)]
+Parameters after <lun> should not contain any blank space character except the first blank space after <lun> is needed.
+.br
 In
 .I fileio
 mode (default), it defines a mapping between a "Logical Unit Number" 
