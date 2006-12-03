@@ -76,3 +76,24 @@ Stopping
 Execute:
 
 	/etc/init.d/iscsi-target stop
+
+
+Contact
+-------------
+Please send bug reports, comments, feature requests etc. to our
+mailing list <iscsitarget-devel@lists.sourceforge.net>.
+
+
+Developer Notes
+----------------
+The central resource for IET development is the
+<iscsitarget-devel@lists.sourceforge.net> mailing list.
+
+Our subversion repository can be found at: svn://svn.berlios.de/iscsitarget
+
+When submitting patches, please diff against the code in our repository's
+trunk and adhere otherwise to the same rules that apply to Linux kernel
+development, in particular the Linux kernel coding style
+($KSRC/Documentation/CodingStyle) and the rules for submitting patches
+($KSRC/Documentation/SubmittingPatches), i.e. please send patches inline as
+plain text.
