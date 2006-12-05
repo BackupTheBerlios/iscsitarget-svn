@@ -11,6 +11,7 @@
 
 #define VENDOR_ID_LEN	8
 #define SCSI_ID_LEN	24
+#define SCSI_SN_LEN	16
 
 #ifndef aligned_u64
 #define aligned_u64 unsigned long long __attribute__((aligned(8)))

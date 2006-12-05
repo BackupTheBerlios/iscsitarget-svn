@@ -158,12 +158,25 @@ static void gen_scsiid(struct iet_volume *volume, struct inode *inode)
 	*(p + 3) = (unsigned int) inode->i_sb->s_dev;
 }
 
+static int set_scsisn(struct iet_volume *volume, const char *sn)
+{
+	size_t len;
+
+	if ((len = strlen(sn)) > SCSI_SN_LEN) {
+		eprintk("too long SCSI SN %lu\n", (unsigned long) len);
+		return -EINVAL;
+	}
+	memcpy(volume->scsi_sn, sn, len);
+	return 0;
+}
+
 enum {
-	Opt_scsiid, Opt_path, Opt_ignore, Opt_err,
+	Opt_scsiid, Opt_scsisn, Opt_path, Opt_ignore, Opt_err,
 };
 
 static match_table_t tokens = {
 	{Opt_scsiid, "ScsiId=%s"},
+	{Opt_scsisn, "ScsiSN=%s"},
 	{Opt_path, "Path=%s"},
 	{Opt_ignore, "Type=%s"},
 	{Opt_ignore, "IOMode=%s"},
@@ -188,6 +201,16 @@ static int parse_fileio_params(struct iet_volume *volume, char *params)
 				goto out;
 			}
 			err = set_scsiid(volume, q);
+			kfree(q);
+			if (err < 0)
+				goto out;
+			break;
+		case Opt_scsisn:
+			if (!(q = match_strdup(&args[0]))) {
+				err = -ENOMEM;
+				goto out;
+			}
+			err = set_scsisn(volume, q);
 			kfree(q);
 			if (err < 0)
 				goto out;

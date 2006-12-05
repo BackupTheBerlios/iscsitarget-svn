@@ -124,7 +124,7 @@ has to be provided, if there is a
 .I <username>
 given.
 .TP 
-.B Lun <lun> (Path=<device>[,Type=fileio][,ScsiId=<scsi_id>] | Sectors=<size>,Type=nullio)[,IOMode=(wb|ro)]
+.B Lun <lun> (Path=<device>[,Type=fileio][,ScsiId=<scsi_id>][,ScsiSN=<scsi_sn>] | Sectors=<size>,Type=nullio)[,IOMode=(wb|ro)]
 Parameters after <lun> should not contain any blank space character except the first blank space after <lun> is needed.
 .br
 In
@@ -139,7 +139,9 @@ can be specified to assign a unique ID to the iSCSI volume. This is useful e.g. 
 .I <device>
 through several targets. The
 .I <scsi_id>
-must not exceed 16 characters.
+must not exceed 16 characters and controls the content of VPD 0x83. The
+.I <scsi_sn>
+must not exceed 16 characters and controls the content VPD 0x80.
 .br 
 In
 .I nullio

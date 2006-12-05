@@ -136,6 +136,7 @@ struct iet_volume {
 	struct iscsi_queue queue;
 
 	u8 scsi_id[SCSI_ID_LEN];
+	u8 scsi_sn[SCSI_SN_LEN];
 
 	u32 blk_shift;
 	u64 blk_cnt;

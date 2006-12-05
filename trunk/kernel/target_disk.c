@@ -200,7 +200,8 @@ static int build_inquiry_response(struct iscsi_cmnd *cmnd)
 			tio_set(tio, 7, 0);
 			err = 0;
 		} else if (scb[2] == 0x80) {
-			int len = SCSI_ID_LEN - VENDOR_ID_LEN;
+			int len = (cmnd->lun && strlen(cmnd->lun->scsi_sn)) ?
+				SCSI_SN_LEN : 4;
 
 			data[1] = 0x80;
 			data[3] = len;
@@ -208,11 +209,11 @@ static int build_inquiry_response(struct iscsi_cmnd *cmnd)
 			tio_set(tio, len + 4, 0);
 			err = 0;
 
-			if (cmnd->lun) {
+			if (len == SCSI_SN_LEN) {
 				char *p, *q;
 
 				p = data + 4 + len - 1;
-				q = cmnd->lun->scsi_id + SCSI_ID_LEN - 1;
+				q = cmnd->lun->scsi_sn + len - 1;
 
 				for (; len > 0; len--, q--)
 					if (isascii(*q) && isprint(*q))

@@ -146,10 +146,9 @@ static int iet_conn_alloc(struct iscsi_session *session, struct conn_info *info)
 
 	dprintk(D_SETUP, "%#Lx:%u\n", (unsigned long long) session->sid, info->cid);
 
-	conn = kmalloc(sizeof(*conn), GFP_KERNEL);
+	conn = kzalloc(sizeof(*conn), GFP_KERNEL);
 	if (!conn)
 		return -ENOMEM;
-	memset(conn, 0, sizeof(*conn));
 
 	conn->session = session;
 	conn->cid = info->cid;
