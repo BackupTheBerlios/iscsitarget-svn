@@ -115,6 +115,9 @@ struct iscsi_target {
 	struct worker_thread_info wthread_info;
 
 	struct semaphore target_sem;
+
+	struct list_head initiator_list;
+	u32 initiator_iid_count;
 };
 
 struct iscsi_queue {
@@ -140,6 +143,9 @@ struct iet_volume {
 
 	u32 blk_shift;
 	u64 blk_cnt;
+
+	u32 reserve_iid;
+	spinlock_t reserve_lock;
 
 	unsigned long flags;
 
@@ -182,6 +188,8 @@ struct iscsi_session {
 	struct list_head cmnd_hash[1 << IET_HASH_ORDER];
 
 	u32 next_ttt;
+
+	struct iscsi_initiator *rinitiator;
 };
 
 enum connection_state_bit {
@@ -268,6 +276,14 @@ struct iscsi_cmnd {
 	struct iscsi_cmnd *req;
 };
 
+struct iscsi_initiator {
+	struct list_head list;
+
+	char *name;
+	u32 iid;
+	u32 usage_count;
+};
+
 #define ISCSI_OP_SCSI_REJECT	ISCSI_OP_VENDOR1_CMD
 #define ISCSI_OP_PDU_REJECT	ISCSI_OP_VENDOR2_CMD
 #define ISCSI_OP_DATA_REJECT	ISCSI_OP_VENDOR3_CMD
@@ -330,6 +346,9 @@ extern void iscsi_volume_destroy(struct iet_volume *);
 extern struct iet_volume *volume_lookup(struct iscsi_target *, u32);
 extern struct iet_volume *volume_get(struct iscsi_target *, u32);
 extern void volume_put(struct iet_volume *);
+extern int volume_reserve(struct iet_volume *volume, u32 iid);
+extern int volume_release(struct iet_volume *volume, u32 iid, int force);
+extern int is_volume_reserved(struct iet_volume *volume, u32 iid);
 
 /* tio.c */
 extern int tio_init(void);

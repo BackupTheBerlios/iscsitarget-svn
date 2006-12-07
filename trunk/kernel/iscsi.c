@@ -355,15 +355,19 @@ void send_scsi_rsp(struct iscsi_cmnd *req, int (*func)(struct iscsi_cmnd *))
 	struct iscsi_cmnd *rsp;
 	struct iscsi_scsi_rsp_hdr *rsp_hdr;
 	u32 size;
+	int ret = func(req);
 
-	switch (func(req)) {
+	switch (ret) {
 	case 0:
+	case -EBUSY:
 		rsp = create_scsi_rsp(req);
 		rsp_hdr = (struct iscsi_scsi_rsp_hdr *) &rsp->pdu.bhs;
 		if ((size = cmnd_read_size(req)) != 0) {
 			rsp_hdr->flags |= ISCSI_FLG_RESIDUAL_UNDERFLOW;
 			rsp_hdr->residual_count = cpu_to_be32(size);
 		}
+		if (ret == -EBUSY)
+			rsp_hdr->cmd_status = SAM_STAT_RESERVATION_CONFLICT;
 		break;
 	case -EIO:
 		/* Medium Error/Write Fault */
@@ -1152,6 +1156,7 @@ static int target_reset(struct iscsi_cmnd *req, u32 lun, int all)
 	struct iscsi_session *session;
 	struct iscsi_conn *conn;
 	struct iscsi_cmnd *cmnd, *tmp;
+	struct iet_volume *volumes;
 
 	list_for_each_entry(session, &target->session_list, list) {
 		list_for_each_entry(conn, &session->conn_list, list) {
@@ -1166,6 +1171,11 @@ static int target_reset(struct iscsi_cmnd *req, u32 lun, int all)
 			}
 		}
 	}
+
+	list_for_each_entry(volumes, &target->volumes, list)
+		if (all || volumes->lun == lun)
+			/* force release */
+			volume_release(volumes, 0, 1);
 
 	return 0;
 }

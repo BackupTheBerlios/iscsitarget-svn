@@ -107,6 +107,7 @@ int volume_add(struct iscsi_target *target, struct volume_info *info)
 
 	INIT_LIST_HEAD(&volume->queue.wait_list);
 	spin_lock_init(&volume->queue.queue_lock);
+	spin_lock_init(&volume->reserve_lock);
 
 	volume->l_state = IDEV_RUNNING;
 	atomic_set(&volume->l_count, 0);
@@ -167,6 +168,39 @@ void volume_put(struct iet_volume *volume)
 {
 	if (atomic_dec_and_test(&volume->l_count) && volume->l_state == IDEV_DEL)
 		iscsi_volume_destroy(volume);
+}
+
+int volume_reserve(struct iet_volume *volume, u32 iid)
+{
+	if (!volume)
+		return -ENOENT;
+
+	spin_lock(&volume->reserve_lock);
+	if (volume->reserve_iid && volume->reserve_iid != iid) {
+		spin_unlock(&volume->reserve_lock);
+		return -EBUSY;
+	}
+
+	volume->reserve_iid = iid;
+	spin_unlock(&volume->reserve_lock);
+
+	return 0;
+}
+
+int is_volume_reserved(struct iet_volume *volume, u32 iid)
+{
+	if (!volume || !volume->reserve_iid || volume->reserve_iid == iid)
+		return 0;
+
+	return -EBUSY;
+}
+
+int volume_release(struct iet_volume *volume, u32 iid, int force)
+{
+	if (force || volume->reserve_iid == iid)
+		volume->reserve_iid = 0;
+
+	return 0;
 }
 
 static void iet_volume_info_show(struct seq_file *seq, struct iscsi_target *target)

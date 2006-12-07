@@ -380,11 +380,45 @@ static int build_generic_response(struct iscsi_cmnd *cmnd)
 	return 0;
 }
 
+static int build_reserve_response(struct iscsi_cmnd *cmnd)
+{
+	return volume_reserve(cmnd->lun, cmnd->conn->session->rinitiator->iid);
+}
+
+static int build_release_response(struct iscsi_cmnd *cmnd)
+{
+	return volume_release(cmnd->lun,
+			      cmnd->conn->session->rinitiator->iid, 0);
+}
+
+static int build_reservation_conflict_response(struct iscsi_cmnd *cmnd)
+{
+	return -EBUSY;
+}
+
 static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 {
 	struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
 
 	req->opcode &= ISCSI_OPCODE_MASK;
+
+	if (is_volume_reserved(cmnd->lun,
+			       cmnd->conn->session->rinitiator->iid)) {
+		switch (req->scb[0]) {
+		case INQUIRY:
+		case RELEASE:
+		case RELEASE_10:
+		case REPORT_LUNS:
+		case REQUEST_SENSE:
+			/* allowed commands when reserved */
+			break;
+		default:
+			/* return reservation conflict for all others */
+			send_scsi_rsp(cmnd,
+				      build_reservation_conflict_response);
+			return 0;
+		}
+	}
 
 	switch (req->scb[0]) {
 	case INQUIRY:
@@ -419,14 +453,18 @@ static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 	case SYNCHRONIZE_CACHE:
 		send_scsi_rsp(cmnd, build_sync_cache_response);
 		break;
+	case RESERVE:
+	case RESERVE_10:
+		send_scsi_rsp(cmnd, build_reserve_response);
+		break;
+	case RELEASE:
+	case RELEASE_10:
+		send_scsi_rsp(cmnd, build_release_response);
+		break;
 	case START_STOP:
 	case TEST_UNIT_READY:
 	case VERIFY:
 	case VERIFY_16:
-	case RESERVE:
-	case RELEASE:
-	case RESERVE_10:
-	case RELEASE_10:
 		send_scsi_rsp(cmnd, build_generic_response);
 		break;
 	default:
