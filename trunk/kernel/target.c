@@ -131,11 +131,11 @@ static int iscsi_target_create(struct target_info *info, u32 tid)
 		return err;
 	}
 
-	if (!(target = kmalloc(sizeof(*target), GFP_KERNEL))) {
+	target = kzalloc(sizeof(*target), GFP_KERNEL);
+	if (!target) {
 		err = -ENOMEM;
 		goto out;
 	}
-	memset(target, 0, sizeof(*target));
 
 	target->tid = info->tid = tid;
 

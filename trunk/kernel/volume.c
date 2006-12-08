@@ -92,9 +92,9 @@ int volume_add(struct iscsi_target *target, struct volume_info *info)
 	if (info->lun > 0x3fff)
 		return -EINVAL;
 
-	if (!(volume = kmalloc(sizeof(*volume), GFP_KERNEL)))
+	volume = kzalloc(sizeof(*volume), GFP_KERNEL);
+	if (!volume)
 		return -ENOMEM;
-	memset(volume, 0, sizeof(*volume));
 
 	volume->target = target;
 	volume->lun = info->lun;

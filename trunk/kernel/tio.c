@@ -20,11 +20,10 @@ static int tio_add_pages(struct tio *tio, int count)
 	count *= sizeof(struct page *);
 
 	do {
-		if (!(tio->pvec = kmalloc(count, GFP_KERNEL)))
+		tio->pvec = kzalloc(count, GFP_KERNEL);
+		if (!tio->pvec)
 			yield();
 	} while (!tio->pvec);
-
-	memset(tio->pvec, 0, count);
 
 	for (i = 0; i < tio->pg_cnt; i++) {
 		do {

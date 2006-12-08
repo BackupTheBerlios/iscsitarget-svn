@@ -259,9 +259,10 @@ static int fileio_attach(struct iet_volume *lu, char *args)
 		return -EBUSY;
 	}
 
-	if (!(p = kmalloc(sizeof(*p), GFP_KERNEL)))
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (!p)
 		return -ENOMEM;
-	memset(p, 0, sizeof(*p));
+
 	lu->private = p;
 
 	if ((err = parse_fileio_params(lu, args)) < 0) {
