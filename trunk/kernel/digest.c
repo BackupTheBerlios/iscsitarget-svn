@@ -1,6 +1,6 @@
 /*
  * iSCSI digest handling.
- * (C) 2004 Xiranet Communications GmbH <arne.redlich@xiranet.com>
+ * (C) 2004 - 2006 Xiranet Communications GmbH <arne.redlich@xiranet.com>
  * This code is licensed under the GPL.
  */
 
@@ -13,7 +13,8 @@
 
 void digest_alg_available(unsigned int *val)
 {
-	if (*val & DIGEST_CRC32C && !crypto_alg_available("crc32c", 0)) {
+	if (*val & DIGEST_CRC32C &&
+	    !crypto_has_alg("crc32c", 0, CRYPTO_ALG_ASYNC)) {
 		printk("CRC32C digest algorithm not available in kernel\n");
 		*val |= ~DIGEST_CRC32C;
 	}
@@ -37,15 +38,22 @@ int digest_init(struct iscsi_conn *conn)
 	if (!(conn->ddigest_type & DIGEST_ALL))
 		conn->ddigest_type = DIGEST_NONE;
 
-	if (conn->hdigest_type & DIGEST_CRC32C || conn->ddigest_type & DIGEST_CRC32C) {
-		conn->rx_digest_tfm = crypto_alloc_tfm("crc32c", 0);
-		if (!conn->rx_digest_tfm) {
+	if (conn->hdigest_type & DIGEST_CRC32C ||
+	    conn->ddigest_type & DIGEST_CRC32C) {
+		conn->rx_hash.tfm = crypto_alloc_hash("crc32c", 0,
+						      CRYPTO_ALG_ASYNC);
+		conn->rx_hash.flags = 0;
+		if (IS_ERR(conn->rx_hash.tfm)) {
+			conn->rx_hash.tfm = NULL;
 			err = -ENOMEM;
 			goto out;
 		}
 
-		conn->tx_digest_tfm = crypto_alloc_tfm("crc32c", 0);
-		if (!conn->tx_digest_tfm) {
+		conn->tx_hash.tfm = crypto_alloc_hash("crc32c", 0,
+						      CRYPTO_ALG_ASYNC);
+		conn->tx_hash.flags = 0;
+		if (IS_ERR(conn->tx_hash.tfm)) {
+			conn->tx_hash.tfm = NULL;
 			err = -ENOMEM;
 			goto out;
 		}
@@ -66,10 +74,10 @@ out:
  */
 void digest_cleanup(struct iscsi_conn *conn)
 {
-	if (conn->tx_digest_tfm)
-		crypto_free_tfm(conn->tx_digest_tfm);
-	if (conn->rx_digest_tfm)
-		crypto_free_tfm(conn->rx_digest_tfm);
+	if (conn->tx_hash.tfm)
+		crypto_free_hash(conn->tx_hash.tfm);
+	if (conn->rx_hash.tfm)
+		crypto_free_hash(conn->rx_hash.tfm);
 }
 
 /**
@@ -160,28 +168,28 @@ static inline void __dbg_simulate_data_digest_error(struct iscsi_cmnd *cmnd)
 	(sg).length = (l);					\
 } while (0)
 
-static void digest_header(struct crypto_tfm *tfm, struct iscsi_pdu *pdu, u8 *crc)
+static void digest_header(struct hash_desc *hash, struct iscsi_pdu *pdu,
+			  u8 *crc)
 {
 	struct scatterlist sg[2];
-	int i = 0;
+	unsigned int nbytes = sizeof(struct iscsi_hdr);
 
-	SETSG(sg[i], &pdu->bhs, sizeof(struct iscsi_hdr));
-	i++;
+	SETSG(sg[0], &pdu->bhs, nbytes);
 	if (pdu->ahssize) {
-		SETSG(sg[i], pdu->ahs, pdu->ahssize);
-		i++;
+		SETSG(sg[1], pdu->ahs, pdu->ahssize);
+		nbytes += pdu->ahssize;
 	}
 
-	crypto_digest_init(tfm);
-	crypto_digest_update(tfm, sg, i);
-	crypto_digest_final(tfm, crc);
+	crypto_hash_init(hash);
+	crypto_hash_update(hash, sg, nbytes);
+	crypto_hash_final(hash, crc);
 }
 
 int digest_rx_header(struct iscsi_cmnd *cmnd)
 {
 	u32 crc;
 
-	digest_header(cmnd->conn->rx_digest_tfm, &cmnd->pdu, (u8 *) &crc);
+	digest_header(&cmnd->conn->rx_hash, &cmnd->pdu, (u8 *) &crc);
 	if (crc != cmnd->hdigest)
 		return -EIO;
 
@@ -190,18 +198,19 @@ int digest_rx_header(struct iscsi_cmnd *cmnd)
 
 void digest_tx_header(struct iscsi_cmnd *cmnd)
 {
-	digest_header(cmnd->conn->tx_digest_tfm, &cmnd->pdu, (u8 *) &cmnd->hdigest);
+	digest_header(&cmnd->conn->tx_hash, &cmnd->pdu, (u8 *) &cmnd->hdigest);
 }
 
-static void digest_data(struct crypto_tfm *tfm, struct iscsi_cmnd *cmnd,
+static void digest_data(struct hash_desc *hash, struct iscsi_cmnd *cmnd,
 			struct tio *tio, u32 offset, u8 *crc)
 {
 	struct scatterlist sg[ISCSI_CONN_IOV_MAX];
 	u32 size, length;
 	int i, idx, count;
+	unsigned int nbytes;
 
 	size = cmnd->pdu.datasize;
-	size = (size + 3) & ~3;
+	nbytes = size = (size + 3) & ~3;
 
 	offset += tio->offset;
 	idx = offset >> PAGE_CACHE_SHIFT;
@@ -211,7 +220,7 @@ static void digest_data(struct crypto_tfm *tfm, struct iscsi_cmnd *cmnd,
 
 	assert(count < ISCSI_CONN_IOV_MAX);
 
-	crypto_digest_init(tfm);
+	crypto_hash_init(hash);
 
 	for (i = 0; size; i++) {
 		if (offset + size > PAGE_CACHE_SIZE)
@@ -226,8 +235,8 @@ static void digest_data(struct crypto_tfm *tfm, struct iscsi_cmnd *cmnd,
 		offset = 0;
 	}
 
-	crypto_digest_update(tfm, sg, count);
-	crypto_digest_final(tfm, crc);
+	crypto_hash_update(hash, sg, nbytes);
+	crypto_hash_final(hash, crc);
 }
 
 int digest_rx_data(struct iscsi_cmnd *cmnd)
@@ -253,9 +262,10 @@ int digest_rx_data(struct iscsi_cmnd *cmnd)
 		offset = 0;
 	}
 
-	digest_data(cmnd->conn->rx_digest_tfm, cmnd, tio, offset, (u8 *) &crc);
+	digest_data(&cmnd->conn->rx_hash, cmnd, tio, offset, (u8 *) &crc);
 
-	if (!cmnd->conn->read_overflow && (cmnd_opcode(cmnd) != ISCSI_OP_PDU_REJECT)) {
+	if (!cmnd->conn->read_overflow &&
+	    (cmnd_opcode(cmnd) != ISCSI_OP_PDU_REJECT)) {
 		if (crc != cmnd->ddigest)
 			return -EIO;
 	}
@@ -269,6 +279,6 @@ void digest_tx_data(struct iscsi_cmnd *cmnd)
 	struct iscsi_data_out_hdr *req = (struct iscsi_data_out_hdr *)&cmnd->pdu.bhs;
 
 	assert(tio);
-	digest_data(cmnd->conn->tx_digest_tfm, cmnd, tio,
+	digest_data(&cmnd->conn->tx_hash, cmnd, tio,
 		    be32_to_cpu(req->buffer_offset), (u8 *) &cmnd->ddigest);
 }

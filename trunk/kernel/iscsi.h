@@ -237,8 +237,8 @@ struct iscsi_conn {
 	u32 write_offset;
 	int write_state;
 
-	struct crypto_tfm *rx_digest_tfm;
-	struct crypto_tfm *tx_digest_tfm;
+	struct hash_desc rx_hash;
+	struct hash_desc tx_hash;
 };
 
 struct iscsi_pdu {
