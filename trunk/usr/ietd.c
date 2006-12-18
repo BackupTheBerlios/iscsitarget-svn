@@ -455,17 +455,17 @@ int main(int argc, char **argv)
 	}
 
 	if ((nl_fd = nl_open()) < 0) {
-		perror("netlink fd\n");
+		perror("netlink fd");
 		exit(-1);
 	};
 
 	if ((ctrl_fd = ki->ctldev_open()) < 0) {
-		perror("ctldev fd\n");
+		perror("ctldev fd");
 		exit(-1);
 	}
 
 	if ((ipc_fd = ietadm_request_listen()) < 0) {
-		perror("ipc fd\n");
+		perror("ipc fd");
 		exit(-1);
 	}
 
@@ -510,10 +510,10 @@ int main(int argc, char **argv)
 	cops->default_load(config);
 
 	if (gid && setgid(gid) < 0)
-		perror("setgid\n");
+		perror("setgid");
 
 	if (uid && setuid(uid) < 0)
-		perror("setuid\n");
+		perror("setuid");
 
 	event_loop(timeout);
 

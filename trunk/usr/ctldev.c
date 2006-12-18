@@ -36,7 +36,7 @@ static int ctrdev_open(void)
 	int ctlfd;
 
 	if (!(f = fopen("/proc/devices", "r"))) {
-		perror("Cannot open control path to the driver\n");
+		perror("Cannot open control path to the driver");
 		return -1;
 	}
 
