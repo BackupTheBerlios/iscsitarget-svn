@@ -323,7 +323,7 @@ static int build_request_sense_response(struct iscsi_cmnd *cmnd)
 	return 0;
 }
 
-static int build_sevice_action_response(struct iscsi_cmnd *cmnd)
+static int build_service_action_response(struct iscsi_cmnd *cmnd)
 {
 	struct tio *tio = cmnd->tio;
 	u32 *data;
@@ -339,7 +339,7 @@ static int build_sevice_action_response(struct iscsi_cmnd *cmnd)
 	data64[0] = cpu_to_be64(cmnd->lun->blk_cnt - 1);
 	data[2] = cpu_to_be32(1UL << cmnd->lun->blk_shift);
 
-	tio_set(tio, 32, 0);
+	tio_set(tio, 12, 0);
 	return 0;
 }
 
@@ -437,7 +437,7 @@ static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 		send_data_rsp(cmnd, build_request_sense_response);
 		break;
 	case SERVICE_ACTION_IN:
-		send_data_rsp(cmnd, build_sevice_action_response);
+		send_data_rsp(cmnd, build_service_action_response);
 		break;
 	case READ_6:
 	case READ_10:
