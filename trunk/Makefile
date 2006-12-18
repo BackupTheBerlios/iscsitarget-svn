@@ -17,7 +17,9 @@ endif
 
 all: progs mods
 
-mods:
+include compat.mk
+
+mods: check_kernel_compat
 	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd)/kernel modules
 
 progs:
@@ -45,3 +47,4 @@ install: kernel/iscsi_trgt.ko usr/ietd usr/ietadm
 clean:
 	$(MAKE) -C usr clean
 	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd)/kernel clean
+
