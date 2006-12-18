@@ -405,7 +405,7 @@ void send_data_rsp(struct iscsi_cmnd *req, int (*func)(struct iscsi_cmnd *))
  * @cmnd: ptr to command
  */
 
-void iscsi_cmnd_remove(struct iscsi_cmnd *cmnd)
+static void iscsi_cmnd_remove(struct iscsi_cmnd *cmnd)
 {
 	struct iscsi_conn *conn;
 
