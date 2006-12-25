@@ -602,6 +602,7 @@ static int plain_init(char *params, char **isns, int *isns_ac)
 		}
 	}
 
+	fclose(config);
 	return 0;
 }
 
