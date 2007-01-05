@@ -36,14 +36,13 @@ static u32 cmnd_read_size(struct iscsi_cmnd *cmnd)
 	struct iscsi_scsi_cmd_hdr *hdr = cmnd_hdr(cmnd);
 
 	if (hdr->flags & ISCSI_CMD_READ) {
+		struct iscsi_rlength_ahdr *ahdr =
+			(struct iscsi_rlength_ahdr *)cmnd->pdu.ahs;
+
 		if (!(hdr->flags & ISCSI_CMD_WRITE))
 			return be32_to_cpu(hdr->data_length);
-		if (hdr->flags & ISCSI_CMD_READ) {
-			struct iscsi_rlength_ahdr *ahdr =
-				(struct iscsi_rlength_ahdr *)cmnd->pdu.ahs;
-			if (ahdr && ahdr->ahstype == ISCSI_AHSTYPE_RLENGTH)
-				return be32_to_cpu(ahdr->read_length);
-		}
+		if (ahdr && ahdr->ahstype == ISCSI_AHSTYPE_RLENGTH)
+			return be32_to_cpu(ahdr->read_length);
 	}
 	return 0;
 }
