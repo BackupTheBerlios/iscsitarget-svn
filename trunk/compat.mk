@@ -55,8 +55,12 @@ ifeq ($(KSUBLEVEL),19)
 # XXX: make sure no compat patch is applied here!?
 	@echo " ... OK"
 else
+ifeq ($(KSUBLEVEL),20)
+	@echo " ... OK"
+else
 	@echo "UNSUPPORTED KERNEL DETECTED"
 	exit 1;
+endif
 endif
 endif
 endif

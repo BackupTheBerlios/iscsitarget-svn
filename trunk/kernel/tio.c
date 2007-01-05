@@ -35,7 +35,7 @@ static int tio_add_pages(struct tio *tio, int count)
 	return 0;
 }
 
-static kmem_cache_t *tio_cache;
+static struct kmem_cache *tio_cache;
 
 struct tio *tio_alloc(int count)
 {

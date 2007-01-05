@@ -15,7 +15,7 @@
 
 unsigned long debug_enable_flags;
 
-static kmem_cache_t *iscsi_cmnd_cache;
+static struct kmem_cache *iscsi_cmnd_cache;
 static char dummy_data[1024];
 
 static int ctr_major;

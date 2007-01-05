@@ -1,7 +1,7 @@
 Index: kernel/iscsi.h
 ===================================================================
 --- kernel/iscsi.h	(working copy)
-+++ kernel/iscsi.h	(revision 79)
++++ kernel/iscsi.h	(revision 88)
 @@ -237,8 +237,8 @@ struct iscsi_conn {
  	u32 write_offset;
  	int write_state;
@@ -16,7 +16,7 @@ Index: kernel/iscsi.h
 Index: kernel/digest.c
 ===================================================================
 --- kernel/digest.c	(working copy)
-+++ kernel/digest.c	(revision 79)
++++ kernel/digest.c	(revision 88)
 @@ -1,6 +1,6 @@
  /*
   * iSCSI digest handling.
@@ -184,7 +184,7 @@ Index: kernel/digest.c
 Index: kernel/file-io.c
 ===================================================================
 --- kernel/file-io.c	(working copy)
-+++ kernel/file-io.c	(revision 79)
++++ kernel/file-io.c	(revision 88)
 @@ -52,9 +52,9 @@ static int fileio_make_request(struct ie
  		set_fs(get_ds());
  
@@ -197,3 +197,29 @@ Index: kernel/file-io.c
  
  		set_fs(oldfs);
  
+Index: kernel/iscsi.c
+===================================================================
+--- kernel/iscsi.c	(working copy)
++++ kernel/iscsi.c	(revision 88)
+@@ -15,7 +15,7 @@
+ 
+ unsigned long debug_enable_flags;
+ 
+-static struct kmem_cache *iscsi_cmnd_cache;
++static kmem_cache_t *iscsi_cmnd_cache;
+ static char dummy_data[1024];
+ 
+ static int ctr_major;
+Index: kernel/tio.c
+===================================================================
+--- kernel/tio.c	(working copy)
++++ kernel/tio.c	(revision 88)
+@@ -35,7 +35,7 @@ static int tio_add_pages(struct tio *tio
+ 	return 0;
+ }
+ 
+-static struct kmem_cache *tio_cache;
++static kmem_cache_t *tio_cache;
+ 
+ struct tio *tio_alloc(int count)
+ {
