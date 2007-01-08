@@ -407,7 +407,6 @@ static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 		switch (req->scb[0]) {
 		case INQUIRY:
 		case RELEASE:
-		case RELEASE_10:
 		case REPORT_LUNS:
 		case REQUEST_SENSE:
 			/* allowed commands when reserved */
@@ -454,11 +453,9 @@ static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 		send_scsi_rsp(cmnd, build_sync_cache_response);
 		break;
 	case RESERVE:
-	case RESERVE_10:
 		send_scsi_rsp(cmnd, build_reserve_response);
 		break;
 	case RELEASE:
-	case RELEASE_10:
 		send_scsi_rsp(cmnd, build_release_response);
 		break;
 	case START_STOP:

@@ -936,8 +936,6 @@ static void scsi_cmnd_start(struct iscsi_conn *conn, struct iscsi_cmnd *req)
 	case REQUEST_SENSE:
 	case RESERVE:
 	case RELEASE:
-	case RESERVE_10:
-	case RELEASE_10:
 	{
 		if (!(req_hdr->flags & ISCSI_CMD_FINAL) || req->pdu.datasize) {
 			/* unexpected unsolicited data */
