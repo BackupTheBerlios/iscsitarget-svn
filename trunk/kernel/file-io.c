@@ -134,7 +134,6 @@ static int set_scsiid(struct iet_volume *volume, const char *id)
 		return -EINVAL;
 	}
 
-	len = min(sizeof(volume->scsi_id) - VENDOR_ID_LEN, len);
 	memcpy(volume->scsi_id + VENDOR_ID_LEN, id, len);
 
 	return 0;
