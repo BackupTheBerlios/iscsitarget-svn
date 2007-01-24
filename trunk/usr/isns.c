@@ -223,7 +223,7 @@ static int isns_scn_deregister(char *name)
 	x = (x & 0x0000ffff) << 16 | (x & 0xffff0000) >> 16;	\
 }
 #else
-#define set_scn_flag(x)
+#define set_scn_flag(x) (x)
 #endif
 
 static int isns_scn_register(void)
