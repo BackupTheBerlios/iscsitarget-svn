@@ -124,8 +124,16 @@ has to be provided, if there is a
 .I <username>
 given.
 .TP 
-.B Lun <lun> (Path=<device>[,Type=fileio][,ScsiId=<scsi_id>][,ScsiSN=<scsi_sn>] | Sectors=<size>,Type=nullio)[,IOMode=(wb|ro)]
+.B Lun <lun> Path=<device>,Type=(fileio|blockio)[,ScsiId=<scsi_id>][,ScsiSN=<scsi_sn>][,IOMode=(wb|ro)] | Sectors=<size>,Type=nullio
 Parameters after <lun> should not contain any blank space character except the first blank space after <lun> is needed.
+.br
+ 
+.br
+This line must occur at least once. The value of
+.I <lun>
+can be between 0 and 2^14\-1.
+.br
+ 
 .br
 In
 .I fileio
@@ -133,16 +141,47 @@ mode (default), it defines a mapping between a "Logical Unit Number"
 .I <lun>
 and a given device
 .I <device>
-, which can be any block device (including regular block devices like hdX and sdX and virtual block devices like LVM and Software RAID devices) or regular files. Optionally a
+, which can be any block device (including regular block devices like hdX and sdX and virtual block devices like LVM and Software RAID devices) or regular files.
+.br
+ 
+.br
+In
+.I blockio
+mode, it defines a mapping between a "Logical Unit Number"
+.I <lun>
+and a given block device
+.I <device>.
+This mode will perform direct block i/o with the device, bypassing page-cache for all operations.
+This allows for efficient handling of non-aligned sector transfers (virtualized environments) and large block transfers (media servers).
+This mode works ideally with high-end storage HBAs and for applications that either do not need caching between application and disk or need the large block throughput.
+.br
+ 
+.br
+Optionally a
 .I <scsi_id>
 can be specified to assign a unique ID to the iSCSI volume. This is useful e.g. in conjunction with a multipath\-aware initiator host accessing the same
 .I <device>
-through several targets. The
+through several targets.
+The
 .I <scsi_id>
 must not exceed 16 characters and controls the content of VPD 0x83. The
 .I <scsi_sn>
 must not exceed 16 characters and controls the content VPD 0x80.
-.br 
+.br
+ 
+.br
+By default, LUNs are writable, employing write-through caching. By setting
+.I IOMode
+to "ro" a LUN can only be accessed read only. Setting
+.I IOMode
+to "wb" will enable write-back caching.
+Please note that this could lead to data loss e.g. in case of power outages, so it is strongly recommended to use an UPS when enabling write-back caching.
+NOTE:
+.I IOMode
+"wb" is ignored when employing blockio.
+.br
+ 
+.br
 In
 .I nullio
 mode, it defines a mapping between a "Logical Unit Number"
@@ -150,16 +189,6 @@ mode, it defines a mapping between a "Logical Unit Number"
 and an unnamed virtual device with
 .I <size>
 sectors. This is ONLY useful for performance measurement purposes. All writes to this virtual device will be discarded and reads will return random data.
-.br
-By default, LUNs are writable, employing write-through caching. By setting
-.I IOMode
-to "ro" a LUN can only be accessed read only. Setting
-.I IOMode
-to "wb" will enable write-back caching. Please note that this could lead to data loss e.g. in case of power outages, so it is strongly recommended to use an UPS when enabling write-back caching.
-.br
-This line must occur at least once. The value of
-.I <lun>
-can be between 0 and 2^14\-1.
 .TP 
 .B [Alias <aliasname>]
 This assigns an optional 

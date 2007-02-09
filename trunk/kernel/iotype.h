@@ -21,6 +21,7 @@ struct iotype {
 
 extern struct iotype fileio;
 extern struct iotype nullio;
+extern struct iotype blockio;
 
 extern int iotype_init(void);
 extern void iotype_exit(void);

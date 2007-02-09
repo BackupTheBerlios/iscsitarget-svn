@@ -78,6 +78,7 @@ static int unregister_iotype(struct iotype *iot)
 
 struct iotype *iotype_array[] = {
 	&fileio,
+	&blockio,
 	&nullio,
 };
 
