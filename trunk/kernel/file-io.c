@@ -19,7 +19,7 @@ struct fileio_data {
 
 static int fileio_make_request(struct iet_volume *lu, struct tio *tio, int rw)
 {
-	struct fileio_data *p = (struct fileio_data *) lu->private;
+	struct fileio_data *p = lu->private;
 	struct file *filp;
 	mm_segment_t oldfs;
 	struct page *page;
@@ -73,7 +73,7 @@ static int fileio_make_request(struct iet_volume *lu, struct tio *tio, int rw)
 
 static int fileio_sync(struct iet_volume *lu, struct tio *tio)
 {
-	struct fileio_data *p = (struct fileio_data *) lu->private;
+	struct fileio_data *p = lu->private;
 	struct inode *inode = p->filp->f_dentry->d_inode;
 	struct address_space *mapping = inode->i_mapping;
 	loff_t ppos, count;
@@ -98,7 +98,7 @@ static int fileio_sync(struct iet_volume *lu, struct tio *tio)
 static int open_path(struct iet_volume *volume, const char *path)
 {
 	int err = 0;
-	struct fileio_data *info = (struct fileio_data *) volume->private;
+	struct fileio_data *info = volume->private;
 	struct file *filp;
 	mm_segment_t oldfs;
 	int flags;
@@ -130,7 +130,8 @@ static int set_scsiid(struct iet_volume *volume, const char *id)
 	size_t len;
 
 	if ((len = strlen(id)) > SCSI_ID_LEN - VENDOR_ID_LEN) {
-		eprintk("too long SCSI ID %lu\n", (unsigned long) len);
+		eprintk("SCSI ID too long, %zd provided, %u max\n", len,
+			SCSI_ID_LEN - VENDOR_ID_LEN);
 		return -EINVAL;
 	}
 
@@ -162,7 +163,8 @@ static int set_scsisn(struct iet_volume *volume, const char *sn)
 	size_t len;
 
 	if ((len = strlen(sn)) > SCSI_SN_LEN) {
-		eprintk("too long SCSI SN %lu\n", (unsigned long) len);
+		eprintk("SCSI SN too long, %zd provided, %u max\n", len,
+			SCSI_SN_LEN);
 		return -EINVAL;
 	}
 	memcpy(volume->scsi_sn, sn, len);
@@ -238,7 +240,7 @@ out:
 
 static void fileio_detach(struct iet_volume *lu)
 {
-	struct fileio_data *p = (struct fileio_data *) lu->private;
+	struct fileio_data *p = lu->private;
 
 	kfree(p->path);
 	if (p->filp)
@@ -292,7 +294,7 @@ out:
 
 void fileio_show(struct iet_volume *lu, struct seq_file *seq)
 {
-	struct fileio_data *p = (struct fileio_data *) lu->private;
+	struct fileio_data *p = lu->private;
 	seq_printf(seq, " path:%s\n", p->path);
 }
 

@@ -33,7 +33,7 @@ static int parse_nullio_params(struct iet_volume *volume, char *params)
 {
 	int err = 0;
 	char *p;
-	struct nullio_data *data = (struct nullio_data *) volume->private;
+	struct nullio_data *data = volume->private;
 
 	while ((p = strsep(&params, ",")) != NULL) {
 		substring_t args[MAX_OPT_ARGS];
@@ -58,7 +58,7 @@ static int parse_nullio_params(struct iet_volume *volume, char *params)
 
 static void nullio_detach(struct iet_volume *lu)
 {
-	struct nullio_data *p = (struct nullio_data *) lu->private;
+	struct nullio_data *p = lu->private;
 
 	kfree(p);
 	lu->private = NULL;
@@ -96,7 +96,7 @@ out:
 
 void nullio_show(struct iet_volume *lu, struct seq_file *seq)
 {
-	struct nullio_data *p = (struct nullio_data *) lu->private;
+	struct nullio_data *p = lu->private;
 	seq_printf(seq, " sectors:%u\n", p->sectors);
 }
 

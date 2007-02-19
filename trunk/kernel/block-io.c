@@ -58,7 +58,7 @@ blockio_bio_endio(struct bio *bio, unsigned int bytes_done, int error)
 static int
 blockio_make_request(struct iet_volume *volume, struct tio *tio, int rw)
 {
-	struct blockio_data *bio_data = (struct blockio_data *) volume->private;
+	struct blockio_data *bio_data = volume->private;
 	struct request_queue *bdev_q = bdev_get_queue(bio_data->bdev);
 	struct tio_work *tio_work;
 	struct bio *tio_bio = NULL, *bio = NULL, *biotail = NULL;
@@ -94,7 +94,7 @@ blockio_make_request(struct iet_volume *volume, struct tio *tio, int rw)
 
 		bio->bi_sector = ppos >> volume->blk_shift;
 		bio->bi_bdev = bio_data->bdev;
-		bio->bi_end_io = (bio_end_io_t *) blockio_bio_endio;
+		bio->bi_end_io = blockio_bio_endio;
 		bio->bi_private = tio_work;
 
 		if (tio_bio)
@@ -158,7 +158,7 @@ out:
 static int
 blockio_open_path(struct iet_volume *volume, const char *path)
 {
-	struct blockio_data *bio_data = (struct blockio_data *) volume->private;
+	struct blockio_data *bio_data = volume->private;
 	struct block_device *bdev;
 	int flags = LUReadonly(volume) ? MS_RDONLY : 0;
 	int err = 0;
@@ -186,8 +186,8 @@ set_scsiid(struct iet_volume *volume, const char *id)
 	size_t len;
 
 	if ((len = strlen(id)) > SCSI_ID_LEN - VENDOR_ID_LEN) {
-		eprintk("SCSI ID too long, %lu provided, %u max \n",
-			(unsigned long) len, SCSI_ID_LEN - VENDOR_ID_LEN);
+		eprintk("SCSI ID too long, %zd provided, %u max\n", len,
+			SCSI_ID_LEN - VENDOR_ID_LEN);
 		return -EINVAL;
 	}
 
@@ -227,8 +227,8 @@ set_scsisn(struct iet_volume *volume, const char *sn)
 	size_t len;
 
 	if ((len = strlen(sn)) > SCSI_SN_LEN) {
-		eprintk("SCSI SN too long, %lu provided, %u max \n",
-			(unsigned long) len, SCSI_SN_LEN);
+		eprintk("SCSI SN too long, %zd provided, %u max\n", len,
+			SCSI_SN_LEN);
 		return -EINVAL;
 	}
 
@@ -315,7 +315,7 @@ parse_blockio_params (struct iet_volume *volume, char *params)
 static void
 blockio_detach(struct iet_volume *volume)
 {
-	struct blockio_data *bio_data = (struct blockio_data *) volume->private;
+	struct blockio_data *bio_data = volume->private;
 
 	if (bio_data->bdev)
 		close_bdev_excl(bio_data->bdev);
@@ -363,7 +363,7 @@ blockio_attach (struct iet_volume *volume, char *args)
 static void
 blockio_show(struct iet_volume *volume, struct seq_file *seq)
 {
-	struct blockio_data *bio_data = (struct blockio_data *) volume->private;
+	struct blockio_data *bio_data = volume->private;
 
 	/* Used to display blockio volume info in /proc/net/iet/volumes */
 	seq_printf(seq, " path:%s\n", bio_data->path);
