@@ -12,14 +12,6 @@
 #include <linux/parser.h>
 #include <linux/blkdev.h>
 #include <linux/buffer_head.h>
-#include <linux/version.h>
-#include <linux/kernel.h>
-#include <linux/proc_fs.h>
-#include <linux/genhd.h>
-#include <linux/fs.h>
-#include <linux/stat.h>
-#include <linux/ctype.h>
-#include <linux/delay.h>
 
 #include "iscsi.h"
 #include "iscsi_dbg.h"
