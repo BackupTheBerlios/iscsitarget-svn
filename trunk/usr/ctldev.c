@@ -119,7 +119,8 @@ static int iscsi_lunit_create(u32 tid, u32 lun, char *args)
 	for (p = args + (strlen(args) - 1); isspace(*p); p--)
 		*p = '\0';
 
-	strncpy(info.args, args, sizeof(info.args) - 1);
+	info.args_ptr = (unsigned long)args;
+	info.args_len = strlen(args);
 
 	err = ioctl(ctrl_fd, ADD_VOLUME, &info);
 	if (err < 0)

@@ -24,9 +24,9 @@ struct target_info {
 
 struct volume_info {
 	u32 tid;
-
 	u32 lun;
-	char args[ISCSI_ARGS_LEN]; /* FIXME */
+	u64 args_ptr;
+	u32 args_len;
 };
 
 struct session_info {

@@ -83,8 +83,9 @@ static int set_iotype(struct iet_volume *volume, char *params)
 
 int volume_add(struct iscsi_target *target, struct volume_info *info)
 {
-	int err = 0;
+	int ret;
 	struct iet_volume *volume;
+	char *args;
 
 	if ((volume = volume_lookup(target, info->lun)))
 		return -EEXIST;
@@ -99,11 +100,26 @@ int volume_add(struct iscsi_target *target, struct volume_info *info)
 	volume->target = target;
 	volume->lun = info->lun;
 
-	if ((err = set_iotype(volume, info->args)) < 0)
-		goto err;
+	args = kzalloc(info->args_len + 1, GFP_KERNEL);
+	if (!args) {
+		ret = -ENOMEM;
+		goto free_volume;
+	}
 
-	if ((err = volume->iotype->attach(volume, info->args)) < 0)
-		goto err;
+	ret = copy_from_user(args, (void *)(unsigned long)info->args_ptr,
+			     info->args_len);
+	if (ret) {
+		ret = -EFAULT;
+		goto free_args;
+	}
+
+	ret = set_iotype(volume, args);
+	if (ret < 0)
+		goto free_args;
+
+	ret = volume->iotype->attach(volume, args);
+	if (ret < 0)
+		goto free_args;
 
 	INIT_LIST_HEAD(&volume->queue.wait_list);
 	spin_lock_init(&volume->queue.queue_lock);
@@ -115,13 +131,14 @@ int volume_add(struct iscsi_target *target, struct volume_info *info)
 	list_add_tail(&volume->list, &target->volumes);
 	atomic_inc(&target->nr_volumes);
 
-err:
-	if (err && volume) {
-		put_iotype(volume->iotype);
-		kfree(volume);
-	}
+	return 0;
+free_args:
+	kfree(args);
+free_volume:
+	put_iotype(volume->iotype);
+	kfree(volume);
 
-	return err;
+	return ret;
 }
 
 void iscsi_volume_destroy(struct iet_volume *volume)
