@@ -240,6 +240,7 @@ int target_del(u32 id)
 
 	if (!list_empty(&target->session_list)) {
 		err = -EBUSY;
+		target_unlock(target);
 		goto out;
 	}
 
@@ -251,9 +252,7 @@ int target_del(u32 id)
 
 	target_destroy(target);
 	return 0;
-
 out:
-	target_unlock(target);
 	up(&target_list_sem);
 	return err;
 }
