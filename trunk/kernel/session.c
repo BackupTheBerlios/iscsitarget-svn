@@ -7,88 +7,6 @@
 #include "iscsi.h"
 #include "iscsi_dbg.h"
 
-static struct iscsi_initiator *initiator_lookup(struct iscsi_target *target,
-						char *name)
-{
-	struct iscsi_initiator *initiator;
-
-	list_for_each_entry(initiator, &target->initiator_list, list) {
-		if (!strcmp(name, initiator->name))
-			return initiator;
-	}
-	return NULL;
-}
-
-static struct iscsi_initiator *initiator_alloc(struct iscsi_target *target,
-					       struct session_info *info)
-{
-	struct iscsi_initiator *initiator;
-	struct iscsi_session *session;
-
-	dprintk(D_SETUP, "%p %u %#Lx\n", target, target->tid,
-		(unsigned long long) info->sid);
-
-	initiator = kzalloc(sizeof(*initiator), GFP_KERNEL);
-	if (!initiator)
-		return NULL;
-
-	initiator->usage_count = 1;
-	initiator->iid = ++target->initiator_iid_count;
-
-	initiator->name = kstrdup(info->initiator_name, GFP_KERNEL);
-	if (!initiator->name) {
-		kfree(initiator);
-		return NULL;
-	}
-
-	dprintk(D_SETUP, "%s %u\n", initiator->name, initiator->iid);
-	list_add(&initiator->list, &target->initiator_list);
-
-	session = session_lookup(target, info->sid);
-	BUG_ON(!session);
-	session->rinitiator = initiator;
-
-	return initiator;
-}
-
-static void initiator_free(struct iscsi_initiator *initiator)
-{
-	list_del(&initiator->list);
-	kfree(initiator->name);
-	kfree(initiator);
-}
-
-static int initiator_add(struct iscsi_target *target, struct session_info *info)
-{
-	struct iscsi_initiator *initiator;
-	struct iscsi_session *session;
-
-	dprintk(D_SETUP, "%s\n", info->initiator_name);
-
-	initiator = initiator_lookup(target, info->initiator_name);
-	if (initiator)
-		initiator->usage_count++;
-	else {
-		initiator = initiator_alloc(target, info);
-		if (!initiator)
-			return -ENOMEM;
-	}
-
-	session = session_lookup(target, info->sid);
-	BUG_ON(!session);
-	session->rinitiator = initiator;
-	return 0;
-}
-
-static void initiator_del(struct iscsi_target *target, char *name)
-{
-	struct iscsi_initiator *initiator;
-
-	initiator = initiator_lookup(target, name);
-	if (initiator && !--initiator->usage_count)
-		initiator_free(initiator);
-}
-
 struct iscsi_session *session_lookup(struct iscsi_target *target, u64 sid)
 {
 	struct iscsi_session *session;
@@ -171,11 +89,7 @@ int session_add(struct iscsi_target *target, struct session_info *info)
 		return err;
 
 	session = iet_session_alloc(target, info);
-	if (session) {
-		err = initiator_add(target, info);
-		if (err)
-			session_free(session);
-	} else
+	if (!session)
 		err = -ENOMEM;
 
 	return err;
@@ -192,8 +106,6 @@ int session_del(struct iscsi_target *target, u64 sid)
 		eprintk("%llu still have connections\n", (unsigned long long) session->sid);
 		return -EBUSY;
 	}
-
-	initiator_del(target, session->initiator);
 
 	return session_free(session);
 }

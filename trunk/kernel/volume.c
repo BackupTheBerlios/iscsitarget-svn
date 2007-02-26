@@ -170,35 +170,35 @@ void volume_put(struct iet_volume *volume)
 		iscsi_volume_destroy(volume);
 }
 
-int volume_reserve(struct iet_volume *volume, u32 iid)
+int volume_reserve(struct iet_volume *volume, u64 sid)
 {
 	if (!volume)
 		return -ENOENT;
 
 	spin_lock(&volume->reserve_lock);
-	if (volume->reserve_iid && volume->reserve_iid != iid) {
+	if (volume->reserve_sid && volume->reserve_sid != sid) {
 		spin_unlock(&volume->reserve_lock);
 		return -EBUSY;
 	}
 
-	volume->reserve_iid = iid;
+	volume->reserve_sid = sid;
 	spin_unlock(&volume->reserve_lock);
 
 	return 0;
 }
 
-int is_volume_reserved(struct iet_volume *volume, u32 iid)
+int is_volume_reserved(struct iet_volume *volume, u64 sid)
 {
-	if (!volume || !volume->reserve_iid || volume->reserve_iid == iid)
+	if (!volume || !volume->reserve_sid || volume->reserve_sid == sid)
 		return 0;
 
 	return -EBUSY;
 }
 
-int volume_release(struct iet_volume *volume, u32 iid, int force)
+int volume_release(struct iet_volume *volume, u64 sid, int force)
 {
-	if (force || volume->reserve_iid == iid)
-		volume->reserve_iid = 0;
+	if (force || volume->reserve_sid == sid)
+		volume->reserve_sid = 0;
 
 	return 0;
 }

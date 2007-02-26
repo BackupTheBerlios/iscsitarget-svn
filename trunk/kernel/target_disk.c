@@ -382,13 +382,13 @@ static int build_generic_response(struct iscsi_cmnd *cmnd)
 
 static int build_reserve_response(struct iscsi_cmnd *cmnd)
 {
-	return volume_reserve(cmnd->lun, cmnd->conn->session->rinitiator->iid);
+	return volume_reserve(cmnd->lun, cmnd->conn->session->sid);
 }
 
 static int build_release_response(struct iscsi_cmnd *cmnd)
 {
 	return volume_release(cmnd->lun,
-			      cmnd->conn->session->rinitiator->iid, 0);
+			      cmnd->conn->session->sid, 0);
 }
 
 static int build_reservation_conflict_response(struct iscsi_cmnd *cmnd)
@@ -403,7 +403,7 @@ static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 	req->opcode &= ISCSI_OPCODE_MASK;
 
 	if (is_volume_reserved(cmnd->lun,
-			       cmnd->conn->session->rinitiator->iid)) {
+			       cmnd->conn->session->sid)) {
 		switch (req->scb[0]) {
 		case INQUIRY:
 		case RELEASE:
