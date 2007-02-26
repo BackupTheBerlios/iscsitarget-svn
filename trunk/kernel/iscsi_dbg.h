@@ -104,7 +104,7 @@ static inline void iscsi_dump_pdu(struct iscsi_pdu *pdu)
 
 #define show_param(param)\
 {\
-	eprintk("%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n",\
+	dprintk(D_SETUP, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n",\
 		(param)->initial_r2t,\
 		(param)->immediate_data,\
 		(param)->max_connections,\
