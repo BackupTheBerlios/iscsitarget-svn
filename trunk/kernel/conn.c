@@ -196,7 +196,8 @@ int conn_add(struct iscsi_session *session, struct conn_info *info)
 	struct iscsi_conn *conn;
 	int err = -EEXIST;
 
-	if ((conn = conn_lookup(session, info->cid)))
+	conn = conn_lookup(session, info->cid);
+	if (conn)
 		return err;
 
 	return iet_conn_alloc(session, info);
@@ -207,7 +208,8 @@ int conn_del(struct iscsi_session *session, struct conn_info *info)
 	struct iscsi_conn *conn;
 	int err = -EEXIST;
 
-	if (!(conn = conn_lookup(session, info->cid)))
+	conn = conn_lookup(session, info->cid);
+	if (!conn)
 		return err;
 
 	conn_close(conn);

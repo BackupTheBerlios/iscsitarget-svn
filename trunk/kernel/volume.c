@@ -87,7 +87,8 @@ int volume_add(struct iscsi_target *target, struct volume_info *info)
 	struct iet_volume *volume;
 	char *args;
 
-	if ((volume = volume_lookup(target, info->lun)))
+	volume = volume_lookup(target, info->lun);
+	if (volume)
 		return -EEXIST;
 
 	if (info->lun > 0x3fff)

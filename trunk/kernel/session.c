@@ -85,7 +85,8 @@ int session_add(struct iscsi_target *target, struct session_info *info)
 	struct iscsi_session *session;
 	int err = -EEXIST;
 
-	if ((session = session_lookup(target, info->sid)))
+	session = session_lookup(target, info->sid);
+	if (session)
 		return err;
 
 	session = iet_session_alloc(target, info);
@@ -99,7 +100,8 @@ int session_del(struct iscsi_target *target, u64 sid)
 {
 	struct iscsi_session *session;
 
-	if (!(session = session_lookup(target, sid)))
+	session = session_lookup(target, sid);
+	if (!session)
 		return -ENOENT;
 
 	if (!list_empty(&session->conn_list)) {

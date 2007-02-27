@@ -47,7 +47,8 @@ static int register_iotype(struct iotype *iot)
 
 	write_lock(&iotypes_lock);
 
-	if ((p = find_iotype(iot->name)))
+	p = find_iotype(iot->name);
+	if (p)
 		err = -EBUSY;
 	else
 		list_add_tail(&iot->iot_list, &iotypes);
