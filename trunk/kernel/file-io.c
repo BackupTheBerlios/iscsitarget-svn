@@ -103,11 +103,9 @@ static int open_path(struct iet_volume *volume, const char *path)
 	mm_segment_t oldfs;
 	int flags;
 
-	info->path = kmalloc(strlen(path) + 1, GFP_KERNEL);
+	info->path = kstrdup(path, GFP_KERNEL);
 	if (!info->path)
 		return -ENOMEM;
-	strcpy(info->path, path);
-	info->path[strlen(path)] = '\0';
 
 	oldfs = get_fs();
 	set_fs(get_ds());
