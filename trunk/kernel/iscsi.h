@@ -12,6 +12,7 @@
 #include <linux/mm.h>
 #include <linux/crypto.h>
 #include <net/sock.h>
+#include <asm/scatterlist.h>
 
 #include "iscsi_hdr.h"
 #include "iet_u.h"
@@ -239,6 +240,7 @@ struct iscsi_conn {
 
 	struct hash_desc rx_hash;
 	struct hash_desc tx_hash;
+	struct scatterlist hash_sg[ISCSI_CONN_IOV_MAX];
 };
 
 struct iscsi_pdu {

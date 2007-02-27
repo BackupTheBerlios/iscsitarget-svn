@@ -204,7 +204,7 @@ void digest_tx_header(struct iscsi_cmnd *cmnd)
 static void digest_data(struct hash_desc *hash, struct iscsi_cmnd *cmnd,
 			struct tio *tio, u32 offset, u8 *crc)
 {
-	struct scatterlist sg[ISCSI_CONN_IOV_MAX];
+	struct scatterlist *sg = cmnd->conn->hash_sg;
 	u32 size, length;
 	int i, idx, count;
 	unsigned int nbytes;
