@@ -580,10 +580,10 @@ static void close_conn(struct iscsi_conn *conn)
 
 	conn->sock->ops->shutdown(conn->sock, 2);
 
-	write_lock(&conn->sock->sk->sk_callback_lock);
+	write_lock_bh(&conn->sock->sk->sk_callback_lock);
 	conn->sock->sk->sk_state_change = session->target->nthread_info.old_state_change;
 	conn->sock->sk->sk_data_ready = session->target->nthread_info.old_data_ready;
-	write_unlock(&conn->sock->sk->sk_callback_lock);
+	write_unlock_bh(&conn->sock->sk->sk_callback_lock);
 
 	fput(conn->file);
 	conn->file = NULL;

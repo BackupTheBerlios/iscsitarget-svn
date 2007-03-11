@@ -108,13 +108,13 @@ static void iet_socket_bind(struct iscsi_conn *conn)
 	conn->sock = SOCKET_I(conn->file->f_dentry->d_inode);
 	conn->sock->sk->sk_user_data = conn;
 
-	write_lock(&conn->sock->sk->sk_callback_lock);
+	write_lock_bh(&conn->sock->sk->sk_callback_lock);
 	target->nthread_info.old_state_change = conn->sock->sk->sk_state_change;
 	conn->sock->sk->sk_state_change = iet_state_change;
 
 	target->nthread_info.old_data_ready = conn->sock->sk->sk_data_ready;
 	conn->sock->sk->sk_data_ready = iet_data_ready;
-	write_unlock(&conn->sock->sk->sk_callback_lock);
+	write_unlock_bh(&conn->sock->sk->sk_callback_lock);
 
 	oldfs = get_fs();
 	set_fs(get_ds());
