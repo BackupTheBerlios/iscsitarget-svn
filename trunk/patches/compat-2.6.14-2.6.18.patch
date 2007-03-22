@@ -1,8 +1,8 @@
 Index: kernel/iscsi.h
 ===================================================================
---- kernel/iscsi.h	(working copy)
-+++ kernel/iscsi.h	(revision 88)
-@@ -237,8 +237,8 @@ struct iscsi_conn {
+--- kernel/iscsi.h	(revision 105)
++++ kernel/iscsi.h	(working copy)
+@@ -238,8 +238,8 @@ struct iscsi_conn {
  	u32 write_offset;
  	int write_state;
  
@@ -10,21 +10,13 @@ Index: kernel/iscsi.h
 -	struct hash_desc tx_hash;
 +	struct crypto_tfm *rx_digest_tfm;
 +	struct crypto_tfm *tx_digest_tfm;
+ 	struct scatterlist hash_sg[ISCSI_CONN_IOV_MAX];
  };
  
- struct iscsi_pdu {
 Index: kernel/digest.c
 ===================================================================
---- kernel/digest.c	(working copy)
-+++ kernel/digest.c	(revision 88)
-@@ -1,6 +1,6 @@
- /*
-  * iSCSI digest handling.
-- * (C) 2004 - 2006 Xiranet Communications GmbH <arne.redlich@xiranet.com>
-+ * (C) 2004 Xiranet Communications GmbH <arne.redlich@xiranet.com>
-  * This code is licensed under the GPL.
-  */
- 
+--- kernel/digest.c	(revision 105)
++++ kernel/digest.c	(working copy)
 @@ -13,8 +13,7 @@
  
  void digest_alg_available(unsigned int *val)
@@ -129,7 +121,7 @@ Index: kernel/digest.c
 +static void digest_data(struct crypto_tfm *tfm, struct iscsi_cmnd *cmnd,
  			struct tio *tio, u32 offset, u8 *crc)
  {
- 	struct scatterlist sg[ISCSI_CONN_IOV_MAX];
+ 	struct scatterlist *sg = cmnd->conn->hash_sg;
  	u32 size, length;
  	int i, idx, count;
 -	unsigned int nbytes;
@@ -183,8 +175,8 @@ Index: kernel/digest.c
  }
 Index: kernel/file-io.c
 ===================================================================
---- kernel/file-io.c	(working copy)
-+++ kernel/file-io.c	(revision 88)
+--- kernel/file-io.c	(revision 105)
++++ kernel/file-io.c	(working copy)
 @@ -52,9 +52,9 @@ static int fileio_make_request(struct ie
  		set_fs(get_ds());
  
@@ -199,8 +191,8 @@ Index: kernel/file-io.c
  
 Index: kernel/iscsi.c
 ===================================================================
---- kernel/iscsi.c	(working copy)
-+++ kernel/iscsi.c	(revision 88)
+--- kernel/iscsi.c	(revision 105)
++++ kernel/iscsi.c	(working copy)
 @@ -15,7 +15,7 @@
  
  unsigned long debug_enable_flags;
@@ -212,8 +204,8 @@ Index: kernel/iscsi.c
  static int ctr_major;
 Index: kernel/tio.c
 ===================================================================
---- kernel/tio.c	(working copy)
-+++ kernel/tio.c	(revision 88)
+--- kernel/tio.c	(revision 105)
++++ kernel/tio.c	(working copy)
 @@ -35,7 +35,7 @@ static int tio_add_pages(struct tio *tio
  	return 0;
  }
