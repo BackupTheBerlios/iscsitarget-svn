@@ -48,15 +48,23 @@ kver_lk = $(shell [ `echo $(KVER) | egrep $(1)` ] && echo 1 || echo 0)
 #
 # Please when adding patch sets start with the latest to the earliest
 # the idea behind this is that by properly patching the latest code
-# base first the earlier patche sets will not need to be modified.
+# base first the earlier patch sets will not need to be modified.
 #
 
+# Compatibility patch for kernels >= 2.6.14 and <= 2.6.18
 ifeq ($(call kver_le,2,6,18),1)
 	PATCHES := $(PATCHES) compat-2.6.14-2.6.18.patch
 endif
 
+# We don't support kernels < 2.6.14 except for explicit distros
 ifeq ($(call kver_lt,2,6,14),1)
 	UNSUPPORTED := true
+endif
+
+# Compatibility patch for RHEL4/CentOS4
+ifeq ($(call kver_lk,"2\.6\.9-.*\.(EL|plus\.c4)"),1)
+	PATCHES += compat-rhel4.patch
+	UNSUPPORTED :=
 endif
 
 MANPAGES:= ietadm.8 ietd.8 ietd.conf.5
