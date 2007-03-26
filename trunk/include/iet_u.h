@@ -25,7 +25,7 @@ struct target_info {
 struct volume_info {
 	u32 tid;
 	u32 lun;
-	u64 args_ptr;
+	aligned_u64 args_ptr;
 	u32 args_len;
 };
 
