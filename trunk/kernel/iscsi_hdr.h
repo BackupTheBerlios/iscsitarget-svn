@@ -12,7 +12,9 @@
 
 #define ISCSI_VERSION			0
 
+#ifndef __packed
 #define __packed __attribute__ ((packed))
+#endif
 
 struct iscsi_hdr {
 	u8  opcode;			/* 0 */
