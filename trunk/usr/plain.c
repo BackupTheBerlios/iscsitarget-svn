@@ -327,7 +327,7 @@ static int __initiator_match(int fd, char *str)
 		return 0;
 
 	while ((p = strsep(&str, ","))) {
-		if (isspace(*p))
+		while (isspace(*p))
 			p++;
 
 		if (!strcmp(p, "ALL"))
@@ -393,7 +393,7 @@ static int initiator_match(u32 tid, int fd, char *filename)
 			continue;
 		*(p++) = '\0';
 
-		if (target_find_by_name(buf) != tid)
+		if (target_find_by_name(buf) != tid && strcmp(buf, "ALL"))
 			continue;
 
 		err = __initiator_match(fd, p);
