@@ -1,3 +1,14 @@
+Summary of changes from v0.4.14 to v0.4.15
+=================================
+
+Juhani Rautiainen
+ o Add RELEASE/RESERVE support
+
+Ross S. W. Walker
+ o Improve the build system to support several kernel versions
+ o Add block-io support
+
+
 Summary of changes from v0.4.13 to v0.4.14
 =================================
 
