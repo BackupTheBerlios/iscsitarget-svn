@@ -152,15 +152,15 @@ install-usr: usr/ietd usr/ietadm
 	@install -vD usr/ietadm $(DISTDIR)/usr/sbin/ietadm
 
 install-etc: install-initd
-	@if [ ! -e /etc/ietd.conf ]; then \
+	@if [ ! -e $(DISTDIR)/etc/ietd.conf ]; then \
 		install -vD -m 644 etc/ietd.conf \
 			$(DISTDIR)/etc/ietd.conf; \
 	fi
-	@if [ ! -e /etc/initiators.allow ]; then \
+	@if [ ! -e $(DISTDIR)/etc/initiators.allow ]; then \
 		install -vD -m 644 etc/initiators.allow \
 			$(DISTDIR)/etc/initiators.allow; \
 	fi
-	@if [ ! -e /etc/initiators.deny ]; then \
+	@if [ ! -e $(DISTDIR)/etc/initiators.deny ]; then \
 		install -vD -m 644 etc/initiators.deny \
 			$(DISTDIR)/etc/initiators.deny; \
 	fi
