@@ -16,7 +16,7 @@
 #include "iotype.h"
 
 struct nullio_data {
-	u32 sectors;
+	u64 sectors;
 };
 
 enum {
@@ -32,7 +32,7 @@ static match_table_t tokens = {
 static int parse_nullio_params(struct iet_volume *volume, char *params)
 {
 	int err = 0;
-	char *p;
+	char *p, *q;
 	struct nullio_data *data = volume->private;
 
 	while ((p = strsep(&params, ",")) != NULL) {
@@ -43,7 +43,11 @@ static int parse_nullio_params(struct iet_volume *volume, char *params)
 		token = match_token(p, tokens, args);
 		switch (token) {
 		case Opt_sectors:
-			match_int(&args[0], &data->sectors);
+			q = match_strdup(&args[0]);
+			if (!q)
+				return -ENOMEM;
+			data->sectors = simple_strtoull(q, NULL, 10);
+			kfree(q);
 			break;
 		case Opt_ignore:
 			break;
@@ -97,7 +101,7 @@ out:
 void nullio_show(struct iet_volume *lu, struct seq_file *seq)
 {
 	struct nullio_data *p = lu->private;
-	seq_printf(seq, " sectors:%u\n", p->sectors);
+	seq_printf(seq, " sectors:%llu\n", p->sectors);
 }
 
 struct iotype nullio =
