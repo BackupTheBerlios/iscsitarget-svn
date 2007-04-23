@@ -148,7 +148,6 @@ static int iscsi_target_create(struct target_info *info, u32 tid)
 
 	INIT_LIST_HEAD(&target->session_list);
 	INIT_LIST_HEAD(&target->volumes);
-	INIT_LIST_HEAD(&target->initiator_list);
 
 	atomic_set(&target->nr_volumes, 0);
 
