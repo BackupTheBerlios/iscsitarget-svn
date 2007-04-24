@@ -16,45 +16,12 @@ else
 fi
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
-MEM_SIZE=1048576
-
-configure_memsize()
-{
-    if [ -e /proc/sys/net/core/wmem_max ]; then
-        echo ${MEM_SIZE} > /proc/sys/net/core/wmem_max
-    fi
-
-    if [ -e /proc/sys/net/core/rmem_max ]; then
-        echo ${MEM_SIZE} > /proc/sys/net/core/rmem_max
-    fi
-
-    if [ -e /proc/sys/net/core/wmem_default ]; then
-        echo ${MEM_SIZE} > /proc/sys/net/core/wmem_default
-    fi
-
-    if [ -e /proc/sys/net/core/rmem_default ]; then
-        echo ${MEM_SIZE} > /proc/sys/net/core/rmem_default
-    fi
-
-    if [ -e /proc/sys/net/ipv4/tcp_mem ]; then
-        echo "${MEM_SIZE} ${MEM_SIZE} ${MEM_SIZE}" > /proc/sys/net/ipv4/tcp_mem
-    fi
-
-    if [ -e  /proc/sys/net/ipv4/tcp_rmem ]; then
-        echo "${MEM_SIZE} ${MEM_SIZE} ${MEM_SIZE}" > /proc/sys/net/ipv4/tcp_rmem
-    fi
-
-    if [ -e /proc/sys/net/ipv4/tcp_wmem ]; then
-        echo "${MEM_SIZE} ${MEM_SIZE} ${MEM_SIZE}" > /proc/sys/net/ipv4/tcp_wmem
-    fi
-}
 
 RETVAL=0
 
 start()
 {
 	echo -n "Starting iSCSI target service: "
-	configure_memsize
 	modprobe -q crc32c
 	modprobe iscsi_trgt
 	daemon /usr/sbin/ietd
