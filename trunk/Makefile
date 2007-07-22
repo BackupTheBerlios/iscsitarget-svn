@@ -145,12 +145,19 @@ unpatch:
 		rm -f .patched.*; \
 	fi
 
-install: install-kernel install-usr install-etc install-doc
+depmod:
+	@echo "Running depmod"
+	@if [ x$(DISTDIR) != x -o x$(INSTALL_MOD_PATH) != x ]; then \
+		depmod -aq -b $(DISTDIR)$(INSTALL_MOD_PATH) $(KVER); \
+	else \
+		depmod -aq $(KVER); \
+	fi
+
+install: install-usr install-etc install-doc install-kernel depmod
 
 install-kernel: kernel/iscsi_trgt.ko
 	@install -vD kernel/iscsi_trgt.ko \
 		$(DISTDIR)$(INSTALL_MOD_PATH)$(KMOD)/iscsi/iscsi_trgt.ko
-	-depmod -aq
 
 install-usr: usr/ietd usr/ietadm
 	@install -vD usr/ietd $(DISTDIR)/usr/sbin/ietd
@@ -209,11 +216,10 @@ install-man:
 			$(DISTDIR)$(MANDIR)/man$$s/$$f ; \
 	done
 
-uninstall: uninstall-kernel uninstall-usr uninstall-etc uninstall-doc
+uninstall: uninstall-kernel depmod uninstall-usr uninstall-etc uninstall-doc
 
 uninstall-kernel:
 	rm -f $(DISTDIR)$(INSTALL_MOD_PATH)$(KMOD)/iscsi/iscsi_trgt.ko
-	-depmod -aq
 
 uninstall-usr:
 	@rm -f $(DISTDIR)/usr/sbin/ietd
