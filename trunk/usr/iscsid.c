@@ -385,7 +385,12 @@ static void login_start(struct connection *conn)
 /* 			return; */
 /* 		} */
 
-		ki->param_get(conn->tid, 0, key_session, conn->session_param);
+		if (ki->param_get(conn->tid, 0, key_session,
+				  conn->session_param)) {
+			rsp->status_class = ISCSI_STATUS_TARGET_ERROR;
+			rsp->status_detail = ISCSI_STATUS_SVC_UNAVAILABLE;
+			conn->state = STATE_EXIT;
+		}
 	}
 	conn->exp_cmd_sn = be32_to_cpu(req->cmd_sn);
 	log_debug(1, "exp_cmd_sn: %d,%d", conn->exp_cmd_sn, req->cmd_sn);
