@@ -22,22 +22,104 @@ struct iet_volume *volume_lookup(struct iscsi_target *target, u32 lun)
 }
 
 enum {
-	Opt_type,
-	Opt_iomode,
-	Opt_err,
+	Opt_scsiid, Opt_scsisn, Opt_path, Opt_ignore, Opt_type, Opt_iomode, Opt_err,
 };
 
 static match_table_t tokens = {
-	{Opt_type, "Type=%s"},
-	{Opt_iomode, "IOMode=%s"},
+	{Opt_scsiid, "ScsiId=%s"},
+	{Opt_scsisn, "ScsiSN=%s"},
+	{Opt_ignore, "Type=%s"},
+	{Opt_ignore, "IOMode=%s"},
 	{Opt_err, NULL},
 };
+
+static int set_scsiid(struct iet_volume *volume, const char *id)
+{
+	size_t len;
+
+	if ((len = strlen(id)) > SCSI_ID_LEN - VENDOR_ID_LEN) {
+		eprintk("SCSI ID too long, %zd provided, %u max\n", len,
+			SCSI_ID_LEN - VENDOR_ID_LEN);
+		return -EINVAL;
+	}
+
+	memcpy(volume->scsi_id + VENDOR_ID_LEN, id, len);
+	return 0;
+}
+
+static int set_scsisn(struct iet_volume *volume, const char *sn)
+{
+	size_t len;
+
+	if ((len = strlen(sn)) > SCSI_SN_LEN) {
+		eprintk("SCSI SN too long, %zd provided, %u max\n", len,
+			SCSI_SN_LEN);
+		return -EINVAL;
+	}
+	memcpy(volume->scsi_sn, sn, len);
+	return 0;
+}
+
+int parse_volume_params(struct iet_volume *volume, char *params, match_fn_t *fn)
+{
+	int err = 0;
+	char *p, *q;
+
+	while ((p = strsep(&params, ",")) != NULL) {
+		substring_t args[MAX_OPT_ARGS];
+		int token;
+		if (!*p)
+			continue;
+		token = match_token(p, tokens, args);
+		switch (token) {
+		case Opt_scsiid:
+			if (!(q = match_strdup(&args[0]))) {
+				err = -ENOMEM;
+				goto out;
+			}
+			err = set_scsiid(volume, q);
+			kfree(q);
+			if (err < 0)
+				goto out;
+			break;
+		case Opt_scsisn:
+			if (!(q = match_strdup(&args[0]))) {
+				err = -ENOMEM;
+				goto out;
+			}
+			err = set_scsisn(volume, q);
+			kfree(q);
+			if (err < 0)
+				goto out;
+			break;
+		case Opt_ignore:
+			break;
+		default:
+			if (fn) {
+				err = fn(volume, p);
+				if (!err)
+					break;
+			}
+
+			eprintk("Unknown %s\n", p);
+			return -EINVAL;
+		}
+	}
+out:
+	return err;
+}
 
 static int set_iotype(struct iet_volume *volume, char *params)
 {
 	int err = 0;
 	substring_t args[MAX_OPT_ARGS];
 	char *p, *argp = NULL, *buf = (char *) get_zeroed_page(GFP_USER);
+
+	match_table_t tokens = {
+		{Opt_type, "Type=%s"},
+		{Opt_iomode, "IOMode=%s"},
+		{Opt_err, NULL},
+	};
 
 	if (!buf)
 		return -ENOMEM;

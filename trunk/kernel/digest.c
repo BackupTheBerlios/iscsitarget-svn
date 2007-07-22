@@ -218,7 +218,7 @@ static void digest_data(struct hash_desc *hash, struct iscsi_cmnd *cmnd,
 	count = get_pgcnt(size, offset);
 	assert(idx + count <= tio->pg_cnt);
 
-	assert(count < ISCSI_CONN_IOV_MAX);
+	assert(count <= ISCSI_CONN_IOV_MAX);
 
 	crypto_hash_init(hash);
 

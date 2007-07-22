@@ -134,7 +134,7 @@ Index: kernel/digest.c
  	idx = offset >> PAGE_CACHE_SHIFT;
 @@ -220,7 +211,7 @@ static void digest_data(struct hash_desc
  
- 	assert(count < ISCSI_CONN_IOV_MAX);
+ 	assert(count <= ISCSI_CONN_IOV_MAX);
  
 -	crypto_hash_init(hash);
 +	crypto_digest_init(tfm);

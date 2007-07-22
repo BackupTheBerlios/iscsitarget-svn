@@ -123,21 +123,6 @@ static int open_path(struct iet_volume *volume, const char *path)
 	return err;
 }
 
-static int set_scsiid(struct iet_volume *volume, const char *id)
-{
-	size_t len;
-
-	if ((len = strlen(id)) > SCSI_ID_LEN - VENDOR_ID_LEN) {
-		eprintk("SCSI ID too long, %zd provided, %u max\n", len,
-			SCSI_ID_LEN - VENDOR_ID_LEN);
-		return -EINVAL;
-	}
-
-	memcpy(volume->scsi_id + VENDOR_ID_LEN, id, len);
-
-	return 0;
-}
-
 static void gen_scsiid(struct iet_volume *volume, struct inode *inode)
 {
 	int i;
@@ -156,33 +141,16 @@ static void gen_scsiid(struct iet_volume *volume, struct inode *inode)
 	*(p + 3) = (unsigned int) inode->i_sb->s_dev;
 }
 
-static int set_scsisn(struct iet_volume *volume, const char *sn)
-{
-	size_t len;
-
-	if ((len = strlen(sn)) > SCSI_SN_LEN) {
-		eprintk("SCSI SN too long, %zd provided, %u max\n", len,
-			SCSI_SN_LEN);
-		return -EINVAL;
-	}
-	memcpy(volume->scsi_sn, sn, len);
-	return 0;
-}
-
 enum {
-	Opt_scsiid, Opt_scsisn, Opt_path, Opt_ignore, Opt_err,
+	Opt_path, Opt_err,
 };
 
 static match_table_t tokens = {
-	{Opt_scsiid, "ScsiId=%s"},
-	{Opt_scsisn, "ScsiSN=%s"},
 	{Opt_path, "Path=%s"},
-	{Opt_ignore, "Type=%s"},
-	{Opt_ignore, "IOMode=%s"},
 	{Opt_err, NULL},
 };
 
-static int parse_fileio_params(struct iet_volume *volume, char *params)
+static int __parse_fileio_params(struct iet_volume *volume, char *params)
 {
 	int err = 0;
 	char *p, *q;
@@ -194,26 +162,6 @@ static int parse_fileio_params(struct iet_volume *volume, char *params)
 			continue;
 		token = match_token(p, tokens, args);
 		switch (token) {
-		case Opt_scsiid:
-			if (!(q = match_strdup(&args[0]))) {
-				err = -ENOMEM;
-				goto out;
-			}
-			err = set_scsiid(volume, q);
-			kfree(q);
-			if (err < 0)
-				goto out;
-			break;
-		case Opt_scsisn:
-			if (!(q = match_strdup(&args[0]))) {
-				err = -ENOMEM;
-				goto out;
-			}
-			err = set_scsisn(volume, q);
-			kfree(q);
-			if (err < 0)
-				goto out;
-			break;
 		case Opt_path:
 			if (!(q = match_strdup(&args[0]))) {
 				err = -ENOMEM;
@@ -224,8 +172,6 @@ static int parse_fileio_params(struct iet_volume *volume, char *params)
 			if (err < 0)
 				goto out;
 			break;
-		case Opt_ignore:
-			break;
 		default:
 			eprintk("Unknown %s\n", p);
 			return -EINVAL;
@@ -234,6 +180,11 @@ static int parse_fileio_params(struct iet_volume *volume, char *params)
 
 out:
 	return err;
+}
+
+static int parse_fileio_params(struct iet_volume *volume, char *params)
+{
+	return parse_volume_params(volume, params, __parse_fileio_params);
 }
 
 static void fileio_detach(struct iet_volume *lu)
