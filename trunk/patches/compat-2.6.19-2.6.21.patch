@@ -1,0 +1,14 @@
+Index: kernel/event.c
+===================================================================
+--- kernel/event.c	(working copy)
++++ kernel/event.c	(revision 122)
+@@ -95,8 +95,7 @@ int event_send(u32 tid, u64 sid, u32 cid
+ 
+ int event_init(void)
+ {
+-	nl = netlink_kernel_create(NETLINK_IET, 1, event_recv, NULL,
+-				   THIS_MODULE);
++	nl = netlink_kernel_create(NETLINK_IET, 1, event_recv, THIS_MODULE);
+ 	if (!nl)
+ 		return -ENOMEM;
+ 	else
