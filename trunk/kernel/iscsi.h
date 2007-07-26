@@ -338,9 +338,6 @@ extern void volume_put(struct iet_volume *);
 extern int volume_reserve(struct iet_volume *volume, u64 sid);
 extern int volume_release(struct iet_volume *volume, u64 sid, int force);
 extern int is_volume_reserved(struct iet_volume *volume, u64 sid);
-typedef int (match_fn_t)(struct iet_volume *volume, char *params);
-extern int parse_volume_params(struct iet_volume *volume, char *params,
-			       match_fn_t *fn);
 
 /* tio.c */
 extern int tio_init(void);
