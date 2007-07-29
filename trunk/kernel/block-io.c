@@ -217,7 +217,7 @@ gen_scsiid(struct iet_volume *volume, struct inode *inode)
 	p = (u32 *) (volume->scsi_id + VENDOR_ID_LEN);
 	*(p + 0) = volume->target->trgt_param.target_type;
 	*(p + 1) = volume->target->tid;
-	*(p + 2) = (unsigned int) inode->i_ino;
+	*(p + 2) = volume->lun;
 	*(p + 3) = (unsigned int) inode->i_sb->s_dev;
 }
 
