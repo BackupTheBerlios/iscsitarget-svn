@@ -169,8 +169,8 @@ blockio_open_path(struct iet_volume *volume, const char *path)
 
 	bdev = open_bdev_excl(path, flags, THIS_MODULE);
 	if (IS_ERR(bdev)) {
-		err = PTR_ERR (bdev);
-		eprintk("Can't open device %s \n", path);
+		err = PTR_ERR(bdev);
+		eprintk("Can't open device %s, error %d\n", path, err);
 		bio_data->bdev = NULL;
 	} else {
 		bio_data->bdev = bdev;
