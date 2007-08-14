@@ -2,7 +2,7 @@ Index: kernel/iscsi.h
 ===================================================================
 --- kernel/iscsi.h	(revision 105)
 +++ kernel/iscsi.h	(working copy)
-@@ -238,8 +238,8 @@ struct iscsi_conn {
+@@ -233,8 +233,8 @@ struct iscsi_conn {
  	u32 write_offset;
  	int write_state;
  
