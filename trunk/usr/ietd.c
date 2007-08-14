@@ -317,8 +317,14 @@ void event_loop(int timeout)
 						goto conn_close;
 					}
 					if (conn->rwsize) {
-						if (!conn->req_buffer)
+						if (!conn->req_buffer) {
 							conn->req_buffer = malloc(INCOMING_BUFSIZE);
+							if (!conn->req_buffer) {
+								log_error("Failed to alloc recv buffer");
+								conn->state = STATE_CLOSE;
+								goto conn_close;
+							}
+						}
 						conn->buffer = conn->req_buffer;
 						conn->req.ahs = conn->buffer;
 						conn->req.data = conn->buffer + conn->req.ahssize;

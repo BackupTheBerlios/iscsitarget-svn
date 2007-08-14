@@ -89,8 +89,13 @@ void text_key_add(struct connection *conn, char *key, char *value)
 	char *buffer;
 
 	if (!conn->rsp.datasize) {
-		if (!conn->rsp_buffer)
+		if (!conn->rsp_buffer) {
 			conn->rsp_buffer = malloc(INCOMING_BUFSIZE);
+			if (!conn->rsp_buffer) {
+				log_error("Failed to alloc send buffer");
+				return;
+			}
+		}
 		conn->rsp.data = conn->rsp_buffer;
 	}
 	if (conn->rwsize + len > INCOMING_BUFSIZE) {
