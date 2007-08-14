@@ -307,6 +307,15 @@ void event_loop(int timeout)
 							      (conn->req.bhs.datalength[1] << 8) +
 							      conn->req.bhs.datalength[2]);
 					conn->rwsize = (conn->req.ahssize + conn->req.datasize + 3) & -4;
+					if (conn->rwsize > INCOMING_BUFSIZE) {
+						log_warning("Recv PDU with "
+							    "invalid size %d "
+							    "(max: %d)",
+							    conn->rwsize,
+							    INCOMING_BUFSIZE);
+						conn->state = STATE_CLOSE;
+						goto conn_close;
+					}
 					if (conn->rwsize) {
 						if (!conn->req_buffer)
 							conn->req_buffer = malloc(INCOMING_BUFSIZE);
@@ -396,6 +405,7 @@ void event_loop(int timeout)
 				exit(1);
 			}
 
+		conn_close:
 			if (conn->state == STATE_CLOSE) {
 				log_debug(0, "connection closed");
 				conn_free_pdu(conn);
