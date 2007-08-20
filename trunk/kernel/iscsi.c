@@ -1191,10 +1191,56 @@ static void task_set_abort(struct iscsi_cmnd *req)
 	}
 }
 
+static inline char *tmf_desc(int fun)
+{
+	static char *tmf_desc[] = {
+		"Unknown Function",
+		"Abort Task",
+		"Abort Task Set",
+		"Clear ACA",
+		"Clear Task Set",
+		"Logical Unit Reset",
+		"Target Warm Reset",
+		"Target Cold Reset",
+		"Task Reassign",
+        };
+
+	if ((fun < ISCSI_FUNCTION_ABORT_TASK) || 
+				(fun > ISCSI_FUNCTION_TASK_REASSIGN))
+		fun = 0;
+
+	return tmf_desc[fun];
+}
+
+static inline char *rsp_desc(int rsp)
+{
+	static char *rsp_desc[] = {
+		"Function Complete",
+		"Unknown Task",
+		"Unknown LUN",
+		"Task Allegiant",
+		"Failover Unsupported",
+		"Function Unsupported",
+		"No Authorization",
+		"Function Rejected",
+		"Unknown Response",
+	};
+
+	if (((rsp < ISCSI_RESPONSE_FUNCTION_COMPLETE) ||
+			(rsp > ISCSI_RESPONSE_NO_AUTHORIZATION)) &&
+			(rsp != ISCSI_RESPONSE_FUNCTION_REJECTED))
+		rsp = 8;
+	else if (rsp == ISCSI_RESPONSE_FUNCTION_REJECTED)
+		rsp = 7;
+
+	return rsp_desc[rsp];
+}
+
 static void execute_task_management(struct iscsi_cmnd *req)
 {
 	struct iscsi_conn *conn = req->conn;
-	struct iscsi_target *target = conn->session->target;
+	struct iscsi_session *session = conn->session;
+	struct iscsi_target *target = session->target;
 	struct iscsi_cmnd *rsp;
 	struct iscsi_task_mgt_hdr *req_hdr = (struct iscsi_task_mgt_hdr *)&req->pdu.bhs;
 	struct iscsi_task_rsp_hdr *rsp_hdr;
@@ -1208,8 +1254,6 @@ static void execute_task_management(struct iscsi_cmnd *req)
 	rsp_hdr->flags = ISCSI_FLG_FINAL;
 	rsp_hdr->itt = req_hdr->itt;
 	rsp_hdr->response = ISCSI_RESPONSE_FUNCTION_COMPLETE;
-
-	eprintk("%x %d %x\n", cmnd_itt(req), function, req_hdr->rtt);
 
 	switch (function) {
 	case ISCSI_FUNCTION_ABORT_TASK:
@@ -1255,6 +1299,11 @@ static void execute_task_management(struct iscsi_cmnd *req)
 		break;
 	}
 out:
+	iprintk("%s (%02x) issued on tid:%d lun:%d by sid:%llu (%s)\n",
+				tmf_desc(function), function, target->tid,
+				translate_lun(req_hdr->lun), session->sid,
+				rsp_desc(rsp_hdr->response));
+
 	iscsi_cmnd_init_write(rsp);
 }
 

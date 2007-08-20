@@ -89,9 +89,11 @@ int iotype_init(void)
 
 	for (i = 0; i < ARRAY_SIZE(iotype_array); i++) {
 		if (!(err = register_iotype(iotype_array[i])))
-			eprintk("register %s\n", iotype_array[i]->name);
+			iprintk("Registered io type %s\n",
+						iotype_array[i]->name);
 		else {
-			eprintk("failed to register %s\n", iotype_array[i]->name);
+			eprintk("Failed to register io type %s\n",
+						iotype_array[i]->name);
 			break;
 		}
 	}

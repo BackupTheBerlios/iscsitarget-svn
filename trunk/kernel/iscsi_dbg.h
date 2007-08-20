@@ -15,21 +15,25 @@
 
 extern unsigned long debug_enable_flags;
 
-#define dprintk(debug, fmt, args...)					\
-do {									\
-	if ((debug) & debug_enable_flags) {				\
-		printk("%s(%d) " fmt, __FUNCTION__, __LINE__, args);	\
-	}								\
+#define PFX "iscsi_trgt: "
+
+#define dprintk(debug, fmt, args...) do {			\
+	if ((debug) & debug_enable_flags) {			\
+		printk(KERN_DEBUG PFX "%s(%d) " fmt, __FUNCTION__,\
+						__LINE__, args);\
+	}							\
 } while (0)
 
-#define eprintk(fmt, args...)					\
-do {								\
-	printk("%s(%d) " fmt, __FUNCTION__, __LINE__, args);	\
+#define eprintk(fmt, args...) do {				\
+	printk(KERN_ERR PFX "%s(%d) " fmt, __FUNCTION__,	\
+						__LINE__, args);\
 } while (0)
+
+#define iprintk(X...) printk(KERN_INFO PFX X)
 
 #define assert(p) do {						\
 	if (!(p)) {						\
-		printk(KERN_CRIT "BUG at %s:%d assert(%s)\n",	\
+		printk(KERN_CRIT PFX "BUG at %s:%d assert(%s)\n",\
 		       __FILE__, __LINE__, #p);			\
 		dump_stack();					\
 		BUG();						\
@@ -40,9 +44,10 @@ do {								\
 static inline void iscsi_dump_iov(struct msghdr *msg)
 {
 	int i;
-	printk("%p, %d\n", msg->msg_iov, msg->msg_iovlen);
+	printk(PFX "%p, %d\n", msg->msg_iov, msg->msg_iovlen);
 	for (i = 0; i < min_t(size_t, msg->msg_iovlen, ISCSI_CONN_IOV_MAX); i++)
-		printk("%d: %p,%d\n", i, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
+		printk(PFX "%d: %p,%d\n", i, msg->msg_iov[i].iov_base,
+						msg->msg_iov[i].iov_len);
 }
 #else
 #define iscsi_dump_iov(x) do {} while (0)
@@ -84,18 +89,18 @@ static inline void iscsi_dump_pdu(struct iscsi_pdu *pdu)
 	int i;
 
 	buf = (void *)&pdu->bhs;
-	printk("BHS: (%p,%d)\n", buf, sizeof(pdu->bhs));
+	printk(PFX "BHS: (%p,%d)\n", buf, sizeof(pdu->bhs));
 	for (i = 0; i < sizeof(pdu->bhs); i++)
 		iscsi_dump_char(*buf++);
 	iscsi_dump_char(-1);
 
 	buf = (void *)pdu->ahs;
-	printk("AHS: (%p,%d)\n", buf, pdu->ahssize);
+	printk(PFX "AHS: (%p,%d)\n", buf, pdu->ahssize);
 	for (i = 0; i < pdu->ahssize; i++)
 		iscsi_dump_char(*buf++);
 	iscsi_dump_char(-1);
 
-	printk("Data: (%d)\n", pdu->datasize);
+	printk(PFX "Data: (%d)\n", pdu->datasize);
 }
 
 #else
