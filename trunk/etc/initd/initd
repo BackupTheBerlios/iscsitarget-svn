@@ -11,7 +11,7 @@ start_server()
 	modprobe iscsi_trgt
 	/usr/sbin/ietd
 }
-	
+
 stop_server()
 {
 	ietadm --op delete
