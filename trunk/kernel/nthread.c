@@ -13,8 +13,6 @@
 #include "iscsi_dbg.h"
 #include "digest.h"
 
-DECLARE_WAIT_QUEUE_HEAD(iscsi_ctl_wait);
-
 enum daemon_state_bit {
 	D_ACTIVE,
 	D_DATA_READY,
