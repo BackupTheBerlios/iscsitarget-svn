@@ -110,8 +110,7 @@ int tio_sync(struct iet_volume *lu, struct tio *tio)
 
 int tio_init(void)
 {
-	tio_cache = kmem_cache_create("tio", sizeof(struct tio),
-				      0, 0, NULL, NULL);
+	tio_cache = KMEM_CACHE(tio, 0);
 	return  tio_cache ? 0 : -ENOMEM;
 }
 

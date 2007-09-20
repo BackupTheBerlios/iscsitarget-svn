@@ -1757,8 +1757,7 @@ static int iscsi_init(void)
 	if ((err = event_init()) < 0)
 		goto err;
 
-	iscsi_cmnd_cache = kmem_cache_create("iscsi_cmnd", sizeof(struct iscsi_cmnd),
-					     0, 0, NULL, NULL);
+	iscsi_cmnd_cache = KMEM_CACHE(iscsi_cmnd, 0);
 	if (!iscsi_cmnd_cache)
 		goto err;
 

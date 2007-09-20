@@ -12,3 +12,30 @@ Index: kernel/event.c
  	if (!nl)
  		return -ENOMEM;
  	else
+Index: kernel/iscsi.c
+===================================================================
+--- kernel/iscsi.c	(working copy)
++++ kernel/iscsi.c	(revision 137)
+@@ -1757,7 +1757,8 @@ static int iscsi_init(void)
+ 	if ((err = event_init()) < 0)
+ 		goto err;
+ 
+-	iscsi_cmnd_cache = KMEM_CACHE(iscsi_cmnd, 0);
++	iscsi_cmnd_cache = kmem_cache_create("iscsi_cmnd", sizeof(struct iscsi_cmnd),
++					     0, 0, NULL, NULL);
+ 	if (!iscsi_cmnd_cache)
+ 		goto err;
+ 
+Index: kernel/tio.c
+===================================================================
+--- kernel/tio.c	(working copy)
++++ kernel/tio.c	(revision 137)
+@@ -110,7 +110,8 @@ int tio_sync(struct iet_volume *lu, stru
+ 
+ int tio_init(void)
+ {
+-	tio_cache = KMEM_CACHE(tio, 0);
++	tio_cache = kmem_cache_create("tio", sizeof(struct tio),
++				      0, 0, NULL, NULL);
+ 	return  tio_cache ? 0 : -ENOMEM;
+ }
