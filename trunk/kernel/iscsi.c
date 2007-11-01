@@ -726,13 +726,16 @@ static void set_offset_and_length(struct iet_volume *lu, u8 *cmd, loff_t *off, u
 	case READ_10:
 	case WRITE_10:
 	case WRITE_VERIFY:
-		*off = be32_to_cpu(*(u32 *)&cmd[2]);
+		*off = cmd[2] << 24 | cmd[3] << 16 | cmd[4] << 8 | cmd[5];
 		*len = (cmd[7] << 8) + cmd[8];
 		break;
 	case READ_16:
 	case WRITE_16:
-		*off = be64_to_cpu(*(u64 *)&cmd[2]);
-		*len = be32_to_cpu(*(u32 *)&cmd[10]);
+		*off = (u64)cmd[2] << 56 | (u64)cmd[3] << 48 |
+			(u64)cmd[4] << 40 | (u64)cmd[5] << 32 |
+			(u64)cmd[6] << 24 | (u64)cmd[7] << 16 |
+			(u64)cmd[8] << 8 | (u64)cmd[9];
+		*len = cmd[10] << 24 | cmd[11] << 16 | cmd[12] << 8 | cmd[13];
 		break;
 	default:
 		BUG();

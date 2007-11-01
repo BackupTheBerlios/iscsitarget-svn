@@ -66,13 +66,15 @@ static int insert_geo_m_pg(u8 *ptr, u64 sec)
 	unsigned char geo_m_pg[] = {0x04, 0x16, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00,
 				    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				    0x00, 0x00, 0x00, 0x00, 0x3a, 0x98, 0x00, 0x00};
-	u32 ncyl, *p;
+	u32 ncyl;
+	u32 n;
 
 	/* assume 0xff heads, 15krpm. */
 	memcpy(ptr, geo_m_pg, sizeof(geo_m_pg));
 	ncyl = sec >> 14; /* 256 * 64 */
-	p = (u32 *)(ptr + 1);
-	*p = *p | cpu_to_be32(ncyl);
+	memcpy(&n, ptr+1, sizeof(u32));
+	n = n | cpu_to_be32(ncyl);
+	memcpy(ptr+1, &n, sizeof(u32));
 	return sizeof(geo_m_pg);
 }
 
@@ -249,7 +251,8 @@ static int build_report_luns_response(struct iscsi_cmnd *cmnd)
 	struct iet_volume *lun;
 	int rest, idx = 0;
 
-	size = be32_to_cpu(*(u32 *)&req->scb[6]);
+	size = req->scb[6] << 24 | req->scb[7] << 16 | req->scb[8] << 8 |
+		req->scb[9];
 	if (size < 16)
 		return -1;
 
