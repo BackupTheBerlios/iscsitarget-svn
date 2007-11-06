@@ -183,7 +183,6 @@ static void digest_header(struct hash_desc *hash, struct iscsi_pdu *pdu,
 	crypto_hash_init(hash);
 	crypto_hash_update(hash, sg, nbytes);
 	crypto_hash_final(hash, crc);
-	*(__be32 *)crc = cpu_to_be32(*(u32*)crc);
 }
 
 int digest_rx_header(struct iscsi_cmnd *cmnd)
@@ -191,14 +190,8 @@ int digest_rx_header(struct iscsi_cmnd *cmnd)
 	u32 crc;
 
 	digest_header(&cmnd->conn->rx_hash, &cmnd->pdu, (u8 *) &crc);
-	if (crc != cmnd->hdigest) {
-		printk(KERN_ERR "%s: hdrdgst error "
-				"recv 0x%x calc 0x%x\n",
-				__func__,
-				cmnd->hdigest,
-				cpu_to_be32(crc));
+	if (crc != cmnd->hdigest)
 		return -EIO;
-	}
 
 	return 0;
 }
@@ -244,7 +237,6 @@ static void digest_data(struct hash_desc *hash, struct iscsi_cmnd *cmnd,
 
 	crypto_hash_update(hash, sg, nbytes);
 	crypto_hash_final(hash, crc);
-	*(__be32 *)crc = cpu_to_be32(*(u32*)crc);
 }
 
 int digest_rx_data(struct iscsi_cmnd *cmnd)
@@ -274,14 +266,8 @@ int digest_rx_data(struct iscsi_cmnd *cmnd)
 
 	if (!cmnd->conn->read_overflow &&
 	    (cmnd_opcode(cmnd) != ISCSI_OP_PDU_REJECT)) {
-		if (crc != cmnd->ddigest) {
-			printk(KERN_ERR "%s: datadgst error "
-					"recv 0x%x calc 0x%x\n",
-					__func__,
-					cmnd->ddigest,
-					crc);
+		if (crc != cmnd->ddigest)
 			return -EIO;
-		}
 	}
 
 	return 0;
