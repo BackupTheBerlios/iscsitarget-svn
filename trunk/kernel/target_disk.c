@@ -251,8 +251,8 @@ static int build_report_luns_response(struct iscsi_cmnd *cmnd)
 	struct iet_volume *lun;
 	int rest, idx = 0;
 
-	size = req->scb[6] << 24 | req->scb[7] << 16 | req->scb[8] << 8 |
-		req->scb[9];
+	size = (u32)req->scb[6] << 24 | (u32)req->scb[7] << 16 |
+		(u32)req->scb[8] << 8 | (u32)req->scb[9];
 	if (size < 16)
 		return -1;
 
