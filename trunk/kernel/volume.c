@@ -132,6 +132,8 @@ int volume_add(struct iscsi_target *target, struct volume_info *info)
 	list_add_tail(&volume->list, &target->volumes);
 	atomic_inc(&target->nr_volumes);
 
+	kfree(args);
+
 	return 0;
 free_args:
 	kfree(args);
