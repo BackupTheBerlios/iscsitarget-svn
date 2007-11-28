@@ -319,6 +319,7 @@ blockio_detach(struct iet_volume *volume)
 
 	if (bio_data->bdev)
 		close_bdev_excl(bio_data->bdev);
+	kfree(bio_data->path);
 
 	kfree(volume->private);
 }
