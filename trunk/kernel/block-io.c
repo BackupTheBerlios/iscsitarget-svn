@@ -247,8 +247,9 @@ static match_table_t tokens = {
 };
 
 static int
-parse_blockio_params (struct iet_volume *volume, char *params)
+parse_blockio_params(struct iet_volume *volume, char *params)
 {
+	struct blockio_data *info = volume->private;
 	int err = 0;
 	char *p, *q;
 
@@ -283,6 +284,13 @@ parse_blockio_params (struct iet_volume *volume, char *params)
 				goto out;
 			break;
 		case Opt_path:
+			if (info->path) {
+				iprintk("Target %s, LUN %u: "
+					"duplicate \"Path\" param\n",
+					volume->target->name, volume->lun);
+				err = -EINVAL;
+				goto out;
+			}
 			if (!(q = match_strdup(&args[0]))) {
 				err = -ENOMEM;
 				goto out;
@@ -295,12 +303,17 @@ parse_blockio_params (struct iet_volume *volume, char *params)
 		case Opt_ignore:
 			break;
 		default:
-			eprintk("Bad option %s for Lun %u on Target %s \n",
-				p, volume->lun, volume->target->name);
+			iprintk("Target %s, LUN %u: unknown param %s\n",
+				volume->target->name, volume->lun, p);
 			return -EINVAL;
 		}
 	}
 
+	if (!info->path) {
+		iprintk("Target %s, LUN %u: missing \"Path\" param\n",
+			volume->target->name, volume->lun);
+		err = -EINVAL;
+	}
   out:
 	return err;
 }
