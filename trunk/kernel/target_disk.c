@@ -86,6 +86,10 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 	int len = 4, err = 0;
 	u8 pcode;
 
+	/* changeable parameter mode pages are unsupported */
+	if ((scb[2] & 0xc0) >> 6 == 0x1)
+		return -1;
+
 	pcode = req->scb[2] & 0x3f;
 
 	assert(!tio);
