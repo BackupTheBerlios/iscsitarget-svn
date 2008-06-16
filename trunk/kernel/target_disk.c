@@ -155,7 +155,11 @@ static int build_inquiry_response(struct iscsi_cmnd *cmnd)
 	u8 *scb = req->scb;
 	int err = -1;
 
-	if (((req->scb[1] & 0x3) == 0x3) || (!(req->scb[1] & 0x3) && req->scb[2]))
+	/*
+	 * - CmdDt and EVPD both set or EVPD and Page Code set: illegal
+	 * - CmdDt set: not supported
+	 */
+	if ((scb[1] & 0x3) > 0x1 || (!(scb[1] & 0x3) && scb[2]))
 		return err;
 
 	assert(!tio);
@@ -183,13 +187,6 @@ static int build_inquiry_response(struct iscsi_cmnd *cmnd)
 		data[62] = 0x03;
 		data[63] = 0x00;
 		tio_set(tio, 64, 0);
-		err = 0;
-	} else if (scb[1] & 0x2) {
-		/* CmdDt bit is set */
-		/* We do not support it now. */
-		data[1] = 0x1;
-		data[5] = 0;
-		tio_set(tio, 6, 0);
 		err = 0;
 	} else if (scb[1] & 0x1) {
 		/* EVPD bit set */
