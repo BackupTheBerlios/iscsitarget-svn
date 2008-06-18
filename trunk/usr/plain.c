@@ -220,7 +220,7 @@ static int plain_account_add(u32 tid, int dir, char *name, char *pass)
 			    " Replacing the old one.\n",
 			    tid ? "target" : "discovery");
 
-		old = (struct user *) list->q_forw;
+		old = list_entry(list->q_forw, struct user, ulist);
 		account_destroy(old);
 	}
 
