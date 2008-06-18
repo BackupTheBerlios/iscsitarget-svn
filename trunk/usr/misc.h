@@ -34,7 +34,7 @@ static inline int list_empty(const struct __qelem *head)
 
 static inline int list_length_is_one(const struct __qelem *head)
 {
-        return head->q_forw == head->q_back;
+        return (!list_empty(head) && head->q_forw == head->q_back);
 }
 
 #define container_of(ptr, type, member) ({			\
