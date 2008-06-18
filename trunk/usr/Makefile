@@ -1,4 +1,5 @@
 CFLAGS += -O2 -fno-inline -Wall -Wstrict-prototypes -g -I../include
+CFLAGS += -D_GNU_SOURCE # required for glibc >= 2.8
 PROGRAMS = ietd ietadm
 LIBS = -lcrypto
 
