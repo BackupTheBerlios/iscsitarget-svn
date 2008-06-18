@@ -4,9 +4,10 @@
  * This code is licenced under the GPL.
  */
 
+#include <linux/types.h>
 #include <linux/blkdev.h>
-#include <linux/writeback.h>
 #include <linux/parser.h>
+#include <linux/writeback.h>
 
 #include "iscsi.h"
 #include "iscsi_dbg.h"

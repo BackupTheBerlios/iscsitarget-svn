@@ -4,11 +4,12 @@
  * This code is licenced under the GPL.
  */
 
+#include <linux/types.h>
+#include <linux/parser.h>
+
 #include "iscsi.h"
 #include "iscsi_dbg.h"
 #include "iotype.h"
-
-#include <linux/parser.h>
 
 struct iet_volume *volume_lookup(struct iscsi_target *target, u32 lun)
 {

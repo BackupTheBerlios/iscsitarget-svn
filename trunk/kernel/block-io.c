@@ -9,8 +9,9 @@
  * This code is licenced under the GPL.
  */
 
-#include <linux/parser.h>
+#include <linux/types.h>
 #include <linux/blkdev.h>
+#include <linux/parser.h>
 #include <linux/buffer_head.h>
 
 #include "iscsi.h"
