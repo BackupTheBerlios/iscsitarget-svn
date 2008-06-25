@@ -153,14 +153,20 @@ struct iet_volume {
 
 enum lu_flags {
 	LU_READONLY,
-	LU_ASYNC,
+	LU_WCACHE,
+	LU_RCACHE,
 };
 
 #define LUReadonly(lu) test_bit(LU_READONLY, &(lu)->flags)
 #define SetLUReadonly(lu) set_bit(LU_READONLY, &(lu)->flags)
 
-#define LUAsync(lu) test_bit(LU_ASYNC, &(lu)->flags)
-#define SetLUAsync(lu) set_bit(LU_ASYNC, &(lu)->flags)
+#define LUWCache(lu) test_bit(LU_WCACHE, &(lu)->flags)
+#define SetLUWCache(lu) set_bit(LU_WCACHE, &(lu)->flags)
+#define ClearLUWCache(lu) clear_bit(LU_WCACHE, &(lu)->flags)
+
+#define LURCache(lu) test_bit(LU_RCACHE, &(lu)->flags)
+#define SetLURCache(lu) set_bit(LU_RCACHE, &(lu)->flags)
+#define ClearLURCache(lu) clear_bit(LU_RCACHE, &(lu)->flags)
 
 #define IET_HASH_ORDER		8
 #define	cmnd_hashfn(itt)	hash_long((itt), IET_HASH_ORDER)

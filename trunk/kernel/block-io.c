@@ -29,9 +29,14 @@ struct tio_work {
 	struct completion tio_complete;
 };
 
-static void blockio_bio_endio(struct bio *bio, int error)
+static int
+blockio_bio_endio(struct bio *bio, unsigned int bytes_done, int error)
 {
 	struct tio_work *tio_work = bio->bi_private;
+
+	/* Ignore partials */
+	if (bio->bi_size)
+		return 1;
 
 	error = test_bit(BIO_UPTODATE, &bio->bi_flags) ? error : -EIO;
 
@@ -43,6 +48,8 @@ static void blockio_bio_endio(struct bio *bio, int error)
 		complete(&tio_work->tio_complete);
 
 	bio_put(bio);
+
+	return 0;
 }
 
 /*
@@ -332,7 +339,7 @@ blockio_detach(struct iet_volume *volume)
 }
 
 static int
-blockio_attach (struct iet_volume *volume, char *args)
+blockio_attach(struct iet_volume *volume, char *args)
 {
 	struct blockio_data *bio_data;
 	int err = 0;
@@ -357,6 +364,10 @@ blockio_attach (struct iet_volume *volume, char *args)
 
 	/* Assign a vendor id, generate scsi id if none exists */
 	gen_scsiid(volume, bio_data->bdev->bd_inode);
+
+	/* Offer neither write nor read caching */
+	ClearLURCache(volume);
+	ClearLUWCache(volume);
 
 	volume->blk_shift = SECTOR_SIZE_BITS;
 	volume->blk_cnt = bio_data->bdev->bd_inode->i_size >> volume->blk_shift;

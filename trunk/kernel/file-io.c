@@ -299,6 +299,8 @@ static int fileio_attach(struct iet_volume *lu, char *args)
 	lu->blk_shift = SECTOR_SIZE_BITS;
 	lu->blk_cnt = inode->i_size >> lu->blk_shift;
 
+	/* we're using the page cache */
+	SetLURCache(lu);
 out:
 	if (err < 0)
 		fileio_detach(lu);

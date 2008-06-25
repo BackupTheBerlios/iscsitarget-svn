@@ -22,15 +22,18 @@ static int insert_disconnect_pg(u8 *ptr)
 	return sizeof(disconnect_pg);
 }
 
-static int insert_caching_pg(u8 *ptr, int async)
+static int insert_caching_pg(u8 *ptr, int wcache, int rcache)
 {
 	unsigned char caching_pg[] = {0x08, 0x12, 0x10, 0x00, 0xff, 0xff, 0x00, 0x00,
 				      0xff, 0xff, 0xff, 0xff, 0x80, 0x14, 0x00, 0x00,
 				      0x00, 0x00, 0x00, 0x00};
 
 	memcpy(ptr, caching_pg, sizeof(caching_pg));
-	if (async)
+	if (wcache)
 		ptr[2] |= 0x04;	/* set WCE bit if we're caching writes */
+	if (!rcache)
+		ptr[2] |= 0x01; /* Read Cache Disable */
+
 	return sizeof(caching_pg);
 }
 
@@ -124,7 +127,8 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 		len += insert_geo_m_pg(data + len, cmnd->lun->blk_cnt);
 		break;
 	case 0x8:
-		len += insert_caching_pg(data + len, LUAsync(cmnd->lun));
+		len += insert_caching_pg(data + len, LUWCache(cmnd->lun),
+					 LURCache(cmnd->lun));
 		break;
 	case 0xa:
 		len += insert_ctrl_m_pg(data + len);
@@ -136,7 +140,8 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 		len += insert_disconnect_pg(data + len);
 		len += insert_format_m_pg(data + len);
 		len += insert_geo_m_pg(data + len, cmnd->lun->blk_cnt);
-		len += insert_caching_pg(data + len, LUAsync(cmnd->lun));
+		len += insert_caching_pg(data + len, LUWCache(cmnd->lun),
+					 LURCache(cmnd->lun));
 		len += insert_ctrl_m_pg(data + len);
 		len += insert_iec_m_pg(data + len);
 		break;
@@ -367,7 +372,7 @@ static int build_write_response(struct iscsi_cmnd *cmnd)
 
 	list_del_init(&cmnd->list);
 	err = tio_write(cmnd->lun, tio);
-	if (!err && !LUAsync(cmnd->lun))
+	if (!err && !LUWCache(cmnd->lun))
 		err = tio_sync(cmnd->lun, tio);
 
 	return err;

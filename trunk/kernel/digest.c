@@ -161,17 +161,22 @@ static inline void __dbg_simulate_data_digest_error(struct iscsi_cmnd *cmnd)
 	}
 }
 
+/* Copied from linux-iscsi initiator and slightly adjusted */
+#define SETSG(sg, p, l) do {					\
+	(sg).page = virt_to_page((p));				\
+	(sg).offset = ((unsigned long)(p) & ~PAGE_CACHE_MASK);	\
+	(sg).length = (l);					\
+} while (0)
+
 static void digest_header(struct hash_desc *hash, struct iscsi_pdu *pdu,
 			  u8 *crc)
 {
 	struct scatterlist sg[2];
 	unsigned int nbytes = sizeof(struct iscsi_hdr);
 
-	sg_init_table(sg, pdu->ahssize ? 2 : 1);
-
-	sg_set_buf(&sg[0], &pdu->bhs, nbytes);
+	SETSG(sg[0], &pdu->bhs, nbytes);
 	if (pdu->ahssize) {
-		sg_set_buf(&sg[1], pdu->ahs, pdu->ahssize);
+		SETSG(sg[1], pdu->ahs, pdu->ahssize);
 		nbytes += pdu->ahssize;
 	}
 
@@ -215,7 +220,6 @@ static void digest_data(struct hash_desc *hash, struct iscsi_cmnd *cmnd,
 
 	assert(count <= ISCSI_CONN_IOV_MAX);
 
-	sg_init_table(sg, ARRAY_SIZE(cmnd->conn->hash_sg));
 	crypto_hash_init(hash);
 
 	for (i = 0; size; i++) {
@@ -224,12 +228,12 @@ static void digest_data(struct hash_desc *hash, struct iscsi_cmnd *cmnd,
 		else
 			length = size;
 
-		sg_set_page(&sg[i], tio->pvec[idx + i], length, offset);
+		sg[i].page = tio->pvec[idx + i];
+		sg[i].offset = offset;
+		sg[i].length = length;
 		size -= length;
 		offset = 0;
 	}
-
-	sg_mark_end(&sg[i - 1]);
 
 	crypto_hash_update(hash, sg, nbytes);
 	crypto_hash_final(hash, crc);

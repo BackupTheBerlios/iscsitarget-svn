@@ -64,7 +64,7 @@ static int set_iotype(struct iet_volume *volume, char *params)
 			if (argp && !strcmp(argp, "ro"))
 				SetLUReadonly(volume);
 			else if (argp && !strcmp(argp, "wb"))
-				SetLUAsync(volume);
+				SetLUWCache(volume);
 			kfree(argp);
 			break;
 		default:
@@ -233,10 +233,11 @@ static void iet_volume_info_show(struct seq_file *seq, struct iscsi_target *targ
 			   volume->lun, volume->l_state, volume->iotype->name);
 		if (LUReadonly(volume))
 			seq_printf(seq, " iomode:ro");
-		else if (LUAsync(volume))
+		else if (LUWCache(volume))
 			seq_printf(seq, " iomode:wb");
 		else
 			seq_printf(seq, " iomode:wt");
+
 		if (volume->iotype->show)
 			volume->iotype->show(volume, seq);
 		else
