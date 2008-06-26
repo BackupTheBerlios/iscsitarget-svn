@@ -29,14 +29,9 @@ struct tio_work {
 	struct completion tio_complete;
 };
 
-static int
-blockio_bio_endio(struct bio *bio, unsigned int bytes_done, int error)
+static void blockio_bio_endio(struct bio *bio, int error)
 {
 	struct tio_work *tio_work = bio->bi_private;
-
-	/* Ignore partials */
-	if (bio->bi_size)
-		return 1;
 
 	error = test_bit(BIO_UPTODATE, &bio->bi_flags) ? error : -EIO;
 
@@ -48,8 +43,6 @@ blockio_bio_endio(struct bio *bio, unsigned int bytes_done, int error)
 		complete(&tio_work->tio_complete);
 
 	bio_put(bio);
-
-	return 0;
 }
 
 /*
