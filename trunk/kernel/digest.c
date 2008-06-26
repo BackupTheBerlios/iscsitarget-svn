@@ -4,8 +4,7 @@
  * This code is licensed under the GPL.
  */
 
-#include <asm/types.h>
-#include <asm/scatterlist.h>
+#include <linux/types.h>
 
 #include "iscsi.h"
 #include "digest.h"

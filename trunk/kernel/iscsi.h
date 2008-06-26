@@ -11,8 +11,8 @@
 #include <linux/seq_file.h>
 #include <linux/mm.h>
 #include <linux/crypto.h>
+#include <linux/scatterlist.h>
 #include <net/sock.h>
-#include <asm/scatterlist.h>
 
 #include "iscsi_hdr.h"
 #include "iet_u.h"
