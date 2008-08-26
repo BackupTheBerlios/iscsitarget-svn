@@ -29,6 +29,8 @@
 #define	SET_LUNIT	(1 << 3)
 #define	SET_USER	(1 << 4)
 
+typedef int (user_handle_fn_t)(struct ietadm_req *req, char *user, char *pass);
+
 enum ietadm_op {
 	OP_NEW,
 	OP_DELETE,
@@ -395,30 +397,10 @@ out:
 	return err;
 }
 
-static int user_handle(int op, u32 set, u32 tid, char *params)
+static int parse_user_params(char *params, u32 *auth_dir, char **user,
+			     char **pass)
 {
-	int err = -EINVAL;
-	char *p, *q, *user = NULL, *pass = NULL;
-	struct ietadm_req req;
-
-	if (set & ~(SET_TARGET | SET_USER))
-		goto out;
-
-	memset(&req, 0, sizeof(req));
-	req.tid = tid;
-
-	switch (op) {
-	case OP_NEW:
-		req.rcmnd = C_ACCT_NEW;
-		break;
-	case OP_DELETE:
-		req.rcmnd = C_ACCT_DEL;
-		break;
-	case OP_UPDATE:
-	case OP_SHOW:
-		fprintf(stderr, "Unsupported.\n");
-		goto out;
-	}
+	char *p, *q;
 
 	while ((p = strsep(&params, ",")) != NULL) {
 		if (!*p)
@@ -431,37 +413,92 @@ static int user_handle(int op, u32 set, u32 tid, char *params)
 			q++;
 
 		if (!strcasecmp(p, "IncomingUser")) {
-			if (user)
-				fprintf(stderr, "Already specified user %s\n", q);
-			user = q;
-			req.u.acnt.auth_dir = AUTH_DIR_INCOMING;
+			if (*user)
+				fprintf(stderr,
+					"Already specified IncomingUser %s\n",
+					q);
+			*user = q;
+			*auth_dir = AUTH_DIR_INCOMING;
 		} else if (!strcasecmp(p, "OutgoingUser")) {
-			if (user)
-				fprintf(stderr, "Already specified user %s\n", q);
-			user = q;
-			req.u.acnt.auth_dir = AUTH_DIR_OUTGOING;
+			if (*user)
+				fprintf(stderr,
+					"Already specified OutgoingUser %s\n",
+					q);
+			*user = q;
+			*auth_dir = AUTH_DIR_OUTGOING;
 		} else if (!strcasecmp(p, "Password")) {
-			if (pass)
-				fprintf(stderr, "Already specified pass %s\n", q);
-			pass = q;
+			if (*pass)
+				fprintf(stderr,
+					"Already specified Password %s\n", q);
+			*pass = q;
 		} else {
 			fprintf(stderr, "Unknown parameter %p\n", q);
-			goto out;
+			return -EINVAL;
 		}
 	}
+	return 0;
+}
 
-	if ((op == OP_NEW && ((user && !pass) || (!user && pass) || (!user && !pass))) ||
-	    (op == OP_DELETE && ((!user && pass) || (!user && !pass)))) {
-		fprintf(stderr,
-			"You need to specify a user and its password %s %s\n", pass, user);
+static int user_handle_new(struct ietadm_req *req, char *user, char *pass)
+{
+	if (!user || !pass) {
+		fprintf(stderr, "Username and password must be specified\n");
+		return -EINVAL;
+	}
+
+	req->rcmnd = C_ACCT_NEW;
+
+	strncpy(req->u.acnt.user, user, sizeof(req->u.acnt.user) - 1);
+	strncpy(req->u.acnt.pass, pass,	sizeof(req->u.acnt.pass) - 1);
+
+	return ietd_request(req);
+}
+
+static int user_handle_del(struct ietadm_req *req, char *user, char *pass)
+{
+	if (!user) {
+		fprintf(stderr, "Username must be specified\n");
+		return -EINVAL;
+	}
+	if (pass)
+		fprintf(stderr, "Ignoring specified password\n");
+
+	req->rcmnd = C_ACCT_DEL;
+
+	strncpy(req->u.acnt.user, user, sizeof(req->u.acnt.user) - 1);
+
+	return ietd_request(req);
+}
+
+static int user_handle(int op, u32 set, u32 tid, char *params)
+{
+	int err = -EINVAL;
+	char *user = NULL, *pass = NULL;
+	struct ietadm_req req;
+	static user_handle_fn_t *user_handle_fn[] = {
+		user_handle_new,
+		user_handle_del,
+		NULL,
+		NULL
+	}, *fn;
+
+	if (set & ~(SET_TARGET | SET_USER))
+		goto out;
+
+	memset(&req, 0, sizeof(req));
+	req.tid = tid;
+
+	err = parse_user_params(params, &req.u.acnt.auth_dir, &user, &pass);
+	if (err)
+		goto out;
+
+	fn = user_handle_fn[op];
+	if (!fn) {
+		fprintf(stderr, "Unsupported\n");
 		goto out;
 	}
 
-	strncpy(req.u.acnt.user, user, sizeof(req.u.acnt.user) - 1);
-	if (pass)
-		strncpy(req.u.acnt.pass, pass, sizeof(req.u.acnt.pass) - 1);
-
-	err = ietd_request(&req);
+	err = fn(&req, user, pass);
 out:
 	return err;
 }
