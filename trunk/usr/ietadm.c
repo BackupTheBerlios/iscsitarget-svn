@@ -74,6 +74,11 @@ iSCSI Enterprise Target Administration Utility.\n\
                         show iSCSI parameters in effect for session [sid]. If\n\
                         [sid] is \"0\" (zero), the configured parameters\n\
                         will be displayed.\n\
+  --op show --tid=[id] --user --params=[user]=[name]\n\
+                        show CHAP account information. [user] can be\n\
+                        \"IncomingUser\" or \"OutgoingUser\". If --tid is\n\
+                        omitted / id=0 (zero), [user] is treated as Discovery\n\
+                        user.\n\
   --op new --tid=[id] --lun=[lun] --params Path=[path]\n\
                         add a new logical unit with [lun] to specific\n\
                         target with [id]. The logical unit is offered\n\
@@ -450,6 +455,46 @@ static int parse_user_params(char *params, u32 *auth_dir, char **user,
 	return 0;
 }
 
+static void show_account(int auth_dir, char *user, char *pass)
+{
+	char buf[(ISCSI_NAME_LEN  + 1) * 2] = {0};
+
+	snprintf(buf, ISCSI_NAME_LEN, "%s", user);
+	if (pass)
+		snprintf(buf + strlen(buf), ISCSI_NAME_LEN, " %s", pass);
+
+	printf("%sUser %s\n", (auth_dir == AUTH_DIR_INCOMING) ?
+	       "Incoming" : "Outgoing", buf);
+}
+
+static int user_handle_show_user(struct ietadm_req *req, char *user)
+{
+	int err;
+
+	req->rcmnd = C_ACCT_SHOW;
+	strncpy(req->u.acnt.u.user.name, user,
+		sizeof(req->u.acnt.u.user.name) - 1);
+
+	err = ietd_request(req, NULL, 0);
+	if (!err)
+		show_account(req->u.acnt.auth_dir, req->u.acnt.u.user.name,
+			     req->u.acnt.u.user.pass);
+
+	return err;
+}
+
+static int user_handle_show(struct ietadm_req *req, char *user, char *pass)
+{
+	if (pass)
+		fprintf(stderr, "Ignoring specified password\n");
+
+	if (user)
+		return user_handle_show_user(req, user);
+
+	fprintf(stderr, "Unsupported\n");
+	return -EINVAL;
+}
+
 static int user_handle_new(struct ietadm_req *req, char *user, char *pass)
 {
 	if (!user || !pass) {
@@ -493,7 +538,7 @@ static int user_handle(int op, u32 set, u32 tid, char *params)
 		user_handle_new,
 		user_handle_del,
 		NULL,
-		NULL
+		user_handle_show,
 	}, *fn;
 
 	if (set & ~(SET_TARGET | SET_USER))

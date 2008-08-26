@@ -111,7 +111,11 @@ static void ietadm_request_exec(struct ietadm_req *req, struct ietadm_rsp *rsp,
 		break;
 	case C_ACCT_LIST:
 	case C_ACCT_UPDATE:
+		break;
 	case C_ACCT_SHOW:
+		err = cops->account_query(req->tid, req->u.acnt.auth_dir,
+					  req->u.acnt.u.user.name,
+					  req->u.acnt.u.user.pass);
 		break;
 	case C_SYS_NEW:
 		break;
