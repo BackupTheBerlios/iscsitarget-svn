@@ -144,7 +144,8 @@ static int ietd_request_send(int fd, struct ietadm_req *req)
 	return err;
 }
 
-static int ietd_response_recv(int fd, struct ietadm_req *req)
+static int ietd_response_recv(int fd, struct ietadm_req *req, void *rsp_data,
+			      size_t rsp_data_sz)
 {
 	int err, ret;
 	struct iovec iov[2];
@@ -162,6 +163,15 @@ static int ietd_response_recv(int fd, struct ietadm_req *req)
 			err);
 	} else
 		err = rsp.err;
+
+	if (!err && rsp_data_sz && rsp_data) {
+		ret = read(fd, rsp_data, rsp_data_sz);
+		if (ret != rsp_data_sz) {
+			err = (ret < 0) ? -errno : -EIO;
+			fprintf(stderr,  "%s %d %d %d\n", __FUNCTION__,
+				__LINE__, ret, err);
+		}
+	}
 
 	return err;
 }
@@ -185,7 +195,8 @@ static int ietd_connect(void)
 	return fd;
 }
 
-static int ietd_request(struct ietadm_req *req)
+static int ietd_request(struct ietadm_req *req, void *rsp_data,
+			size_t rsp_data_sz)
 {
 	int fd = -1, err = -EIO;
 
@@ -197,7 +208,7 @@ static int ietd_request(struct ietadm_req *req)
 	if ((err = ietd_request_send(fd, req)) < 0)
 		goto out;
 
-	err = ietd_response_recv(fd, req);
+	err = ietd_response_recv(fd, req, rsp_data, rsp_data_sz);
 
 out:
 	if (fd > 0)
@@ -320,7 +331,7 @@ static int trgt_handle(int op, u32 set, u32 tid, char *params)
 		break;
 	}
 
-	err = ietd_request(&req);
+	err = ietd_request(&req, NULL, 0);
 	if (!err && req.rcmnd == C_TRGT_SHOW)
 		show_iscsi_param(key_target, req.u.trgt.target_param);
 
@@ -359,7 +370,7 @@ static int lunit_handle(int op, u32 set, u32 tid, u32 lun, char *params)
 		break;
 	}
 
-	err = ietd_request(&req);
+	err = ietd_request(&req, NULL, 0);
 out:
 	return err;
 }
@@ -387,7 +398,7 @@ static int sess_handle(int op, u32 set, u32 tid, u64 sid, char *params)
 		break;
 	case OP_SHOW:
 		req.rcmnd = C_SESS_SHOW;
-		err = ietd_request(&req);
+		err = ietd_request(&req, NULL, 0);
 		if (!err)
 			show_iscsi_param(key_session, req.u.trgt.session_param);
 		break;
@@ -448,10 +459,12 @@ static int user_handle_new(struct ietadm_req *req, char *user, char *pass)
 
 	req->rcmnd = C_ACCT_NEW;
 
-	strncpy(req->u.acnt.user, user, sizeof(req->u.acnt.user) - 1);
-	strncpy(req->u.acnt.pass, pass,	sizeof(req->u.acnt.pass) - 1);
+	strncpy(req->u.acnt.u.user.name, user,
+		sizeof(req->u.acnt.u.user.name) - 1);
+	strncpy(req->u.acnt.u.user.pass, pass,
+		sizeof(req->u.acnt.u.user.pass) - 1);
 
-	return ietd_request(req);
+	return ietd_request(req, NULL, 0);
 }
 
 static int user_handle_del(struct ietadm_req *req, char *user, char *pass)
@@ -465,9 +478,10 @@ static int user_handle_del(struct ietadm_req *req, char *user, char *pass)
 
 	req->rcmnd = C_ACCT_DEL;
 
-	strncpy(req->u.acnt.user, user, sizeof(req->u.acnt.user) - 1);
+	strncpy(req->u.acnt.u.user.name, user,
+		sizeof(req->u.acnt.u.user.name) - 1);
 
-	return ietd_request(req);
+	return ietd_request(req, NULL, 0);
 }
 
 static int user_handle(int op, u32 set, u32 tid, char *params)
@@ -531,7 +545,7 @@ static int conn_handle(int op, u32 set, u32 tid, u64 sid, u32 cid, char *params)
 		break;
 	}
 
-	err = ietd_request(&req);
+	err = ietd_request(&req, NULL, 0);
 out:
 	return err;
 }
@@ -555,7 +569,7 @@ static int sys_handle(int op, u32 set, char *params)
 		break;
 	}
 
-	err = ietd_request(&req);
+	err = ietd_request(&req, NULL, 0);
 
 	return err;
 }
