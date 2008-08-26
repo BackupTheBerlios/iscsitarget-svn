@@ -110,6 +110,20 @@ static void ietadm_request_exec(struct ietadm_req *req, struct ietadm_rsp *rsp,
 					req->u.acnt.u.user.name);
 		break;
 	case C_ACCT_LIST:
+		*rsp_data = malloc(req->u.acnt.u.list.alloc_len);
+		if (!*rsp_data) {
+			err = -ENOMEM;
+			break;
+		}
+
+		*rsp_data_sz = req->u.acnt.u.list.alloc_len;
+		memset(*rsp_data, 0x0, *rsp_data_sz);
+
+		err = cops->account_list(req->tid, req->u.acnt.auth_dir,
+					 &req->u.acnt.u.list.count,
+					 &req->u.acnt.u.list.overflow,
+					 *rsp_data, *rsp_data_sz);
+		break;
 	case C_ACCT_UPDATE:
 		break;
 	case C_ACCT_SHOW:
