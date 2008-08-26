@@ -74,6 +74,9 @@ iSCSI Enterprise Target Administration Utility.\n\
                         show iSCSI parameters in effect for session [sid]. If\n\
                         [sid] is \"0\" (zero), the configured parameters\n\
                         will be displayed.\n\
+  --op show --tid=[id] --user\n\
+                        show list of Discovery (--tid omitted / id=0 (zero))\n\
+                        or target CHAP accounts.\n\
   --op show --tid=[id] --user --params=[user]=[name]\n\
                         show CHAP account information. [user] can be\n\
                         \"IncomingUser\" or \"OutgoingUser\". If --tid is\n\
@@ -483,6 +486,59 @@ static int user_handle_show_user(struct ietadm_req *req, char *user)
 	return err;
 }
 
+static int user_handle_show_list(struct ietadm_req *req)
+{
+	int i, err, retry;
+	size_t buf_sz = 0;
+	char *buf;
+
+	req->u.acnt.auth_dir = AUTH_DIR_INCOMING;
+	req->rcmnd = C_ACCT_LIST;
+
+	do {
+		retry = 0;
+
+		buf_sz = buf_sz ? buf_sz : ISCSI_NAME_LEN;
+
+		buf = calloc(buf_sz, sizeof(char *));
+		if (!buf) {
+			fprintf(stderr, "Memory allocation failed\n");
+			return -ENOMEM;
+		}
+
+		req->u.acnt.u.list.alloc_len = buf_sz;
+
+		err = ietd_request(req, buf, buf_sz);
+		if (err) {
+			free(buf);
+			break;
+		}
+
+		if (req->u.acnt.u.list.overflow) {
+			buf_sz = ISCSI_NAME_LEN * (req->u.acnt.u.list.count +
+						   req->u.acnt.u.list.overflow);
+			retry = 1;
+			free(buf);
+			continue;
+		}
+
+		for (i = 0; i < req->u.acnt.u.list.count; i++)
+			show_account(req->u.acnt.auth_dir,
+				     &buf[i * ISCSI_NAME_LEN], NULL);
+
+		if (req->u.acnt.auth_dir == AUTH_DIR_INCOMING) {
+			req->u.acnt.auth_dir = AUTH_DIR_OUTGOING;
+			buf_sz = 0;
+			retry = 1;
+		}
+
+		free(buf);
+
+	} while (retry);
+
+	return err;
+}
+
 static int user_handle_show(struct ietadm_req *req, char *user, char *pass)
 {
 	if (pass)
@@ -490,9 +546,8 @@ static int user_handle_show(struct ietadm_req *req, char *user, char *pass)
 
 	if (user)
 		return user_handle_show_user(req, user);
-
-	fprintf(stderr, "Unsupported\n");
-	return -EINVAL;
+	else
+		return user_handle_show_list(req);
 }
 
 static int user_handle_new(struct ietadm_req *req, char *user, char *pass)
