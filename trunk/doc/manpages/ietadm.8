@@ -154,7 +154,7 @@ display status of target 1 (see /proc/net/iet/volumes to get the matching target
 create dynamically a new target, numbered 2. \s-1CAUTION\s0 : the target will disappear if you restart ietd, you'll have to edit /etc/ietd.conf to make it permanent!
 .SH "ERROR MESSAGES"
 .IX Header "ERROR MESSAGES"
-ietadm misses error messages. Look carefully the \s-1STDERR\s0 output : in case of error
+ietadm misses error messages. Look carefully at the \s-1STDERR\s0 output : in case of error
 it will send a 3 number error code, ending with \-1, for instance :
 .PP
 ietd_request 203 3 \-1
@@ -215,6 +215,17 @@ add a new account with [pass] for specific target.
 [user] could be [IncomingUser] or [OutgoingUser].
 If you don't specify a target (omit \-\-tid option),
 you add a new account for discovery sessions.
+.PP
+\&\fB\-\-op show \-\-tid=[id] \-\-user\fR
+.PP
+show a list of CHAP accounts.
+If \-\-tid is omitted or [id] is \*(L"0\*(R" (zero), discovery accounts are displayed.
+.PP
+\&\fB\-\-op show \-\-tid=[id] \-\-user \-\-params=[user]=[name]\fR
+.PP
+show CHAP account information for the account specified by [name].
+[user] can be [IncomingUser] or [OutgoingUser].
+If \-\-tid is omitted or [id] is \*(L"0\*(R" (zero), [name] is supposed to be a discovery account name.
 .PP
 \&\fB\-\-op delete \-\-tid=[id] \-\-user \-\-params=[user]=[name]\fR
 .PP
