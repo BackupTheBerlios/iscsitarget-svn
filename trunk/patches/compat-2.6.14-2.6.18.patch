@@ -199,7 +199,7 @@ Index: kernel/iscsi.c
  
 -static struct kmem_cache *iscsi_cmnd_cache;
 +static kmem_cache_t *iscsi_cmnd_cache;
- static char dummy_data[1024];
+ static u8 dummy_data[PAGE_SIZE];
  
  static int ctr_major;
 Index: kernel/tio.c
