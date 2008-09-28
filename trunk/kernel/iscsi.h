@@ -66,6 +66,7 @@ struct network_thread_info {
 
 	void (*old_state_change)(struct sock *);
 	void (*old_data_ready)(struct sock *, int);
+	void (*old_write_space)(struct sock *);
 };
 
 struct worker_thread_info;
@@ -197,6 +198,7 @@ struct iscsi_session {
 enum connection_state_bit {
 	CONN_ACTIVE,
 	CONN_CLOSING,
+	CONN_WSPACE_WAIT,
 };
 
 #define ISCSI_CONN_IOV_MAX	(((256 << 10) >> PAGE_SHIFT) + 1)
@@ -306,6 +308,7 @@ extern void conn_info_show(struct seq_file *, struct iscsi_session *);
 extern int nthread_init(struct iscsi_target *);
 extern int nthread_start(struct iscsi_target *);
 extern int nthread_stop(struct iscsi_target *);
+extern void __nthread_wakeup(struct network_thread_info *);
 extern void nthread_wakeup(struct iscsi_target *);
 
 /* wthread.c */
