@@ -1,3 +1,28 @@
+Summary of changes from v0.4.16 to v0.4.17
+=================================
+
+Denis ChengRq
+  o fix stopping of wthreads that have never been awakened
+
+Shreyansh Jain
+  o fix debugging code that hexdumps PDU content to the syslog
+
+Jagadish Kumar
+  o avoid busy looping if a connection's socket is out of wmem
+
+Arne Redlich
+  o add support for "ietadm --op show --user"
+  o SCSI fixes: MODE SENSE handling, INQUIRY CmdDt, HiSup, WCE and RCD handling
+  o fix handling of NOP-Out w/ ping data
+  o fix compilation against glibc >= 2.8
+  o fix potential NULL-pointer derefences and resource leaks in the LUN param
+    parsing code
+  o documentation updates
+
+Ross S. W. Walker
+  o 2.6.26 and SLES compile fix
+
+
 Summary of changes from v0.4.15 to v0.4.16
 =================================
 
