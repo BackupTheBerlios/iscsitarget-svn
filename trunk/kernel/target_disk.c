@@ -179,7 +179,7 @@ static int build_inquiry_response(struct iscsi_cmnd *cmnd)
 
 	if (!(scb[1] & 0x3)) {
 		data[2] = 4;
-		data[3] = 0x42;
+		data[3] = 0x52;
 		data[4] = 59;
 		data[7] = 0x02;
 		memset(data + 8, 0x20, 28);
