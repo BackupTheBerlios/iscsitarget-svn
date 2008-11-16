@@ -2,7 +2,7 @@ Index: kernel/iscsi.h
 ===================================================================
 --- kernel/iscsi.h	(revision 105)
 +++ kernel/iscsi.h	(working copy)
-@@ -233,8 +233,8 @@ struct iscsi_conn {
+@@ -241,8 +241,8 @@ struct iscsi_conn {
  	u32 write_offset;
  	int write_state;
  
@@ -17,7 +17,7 @@ Index: kernel/digest.c
 ===================================================================
 --- kernel/digest.c	(revision 105)
 +++ kernel/digest.c	(working copy)
-@@ -13,8 +13,7 @@
+@@ -12,8 +12,7 @@
  
  void digest_alg_available(unsigned int *val)
  {
@@ -27,7 +27,7 @@ Index: kernel/digest.c
  		printk("CRC32C digest algorithm not available in kernel\n");
  		*val |= ~DIGEST_CRC32C;
  	}
-@@ -38,22 +37,15 @@ int digest_init(struct iscsi_conn *conn)
+@@ -37,22 +36,15 @@ int digest_init(struct iscsi_conn *conn)
  	if (!(conn->ddigest_type & DIGEST_ALL))
  		conn->ddigest_type = DIGEST_NONE;
  
@@ -55,7 +55,7 @@ Index: kernel/digest.c
  			err = -ENOMEM;
  			goto out;
  		}
-@@ -74,10 +66,10 @@ out:
+@@ -73,10 +65,10 @@ out:
   */
  void digest_cleanup(struct iscsi_conn *conn)
  {
@@ -70,7 +70,7 @@ Index: kernel/digest.c
  }
  
  /**
-@@ -168,28 +160,28 @@ static inline void __dbg_simulate_data_d
+@@ -167,28 +159,28 @@ static inline void __dbg_simulate_data_d
  	(sg).length = (l);					\
  } while (0)
  
@@ -109,7 +109,7 @@ Index: kernel/digest.c
  	if (crc != cmnd->hdigest)
  		return -EIO;
  
-@@ -198,19 +190,18 @@ int digest_rx_header(struct iscsi_cmnd *
+@@ -197,19 +189,18 @@ int digest_rx_header(struct iscsi_cmnd *
  
  void digest_tx_header(struct iscsi_cmnd *cmnd)
  {
@@ -132,7 +132,7 @@ Index: kernel/digest.c
  
  	offset += tio->offset;
  	idx = offset >> PAGE_CACHE_SHIFT;
-@@ -220,7 +211,7 @@ static void digest_data(struct hash_desc
+@@ -219,7 +210,7 @@ static void digest_data(struct hash_desc
  
  	assert(count <= ISCSI_CONN_IOV_MAX);
  
@@ -141,7 +141,7 @@ Index: kernel/digest.c
  
  	for (i = 0; size; i++) {
  		if (offset + size > PAGE_CACHE_SIZE)
-@@ -235,8 +226,8 @@ static void digest_data(struct hash_desc
+@@ -234,8 +225,8 @@ static void digest_data(struct hash_desc
  		offset = 0;
  	}
  
@@ -152,7 +152,7 @@ Index: kernel/digest.c
  }
  
  int digest_rx_data(struct iscsi_cmnd *cmnd)
-@@ -262,10 +253,9 @@ int digest_rx_data(struct iscsi_cmnd *cm
+@@ -261,10 +252,9 @@ int digest_rx_data(struct iscsi_cmnd *cm
  		offset = 0;
  	}
  
@@ -165,7 +165,7 @@ Index: kernel/digest.c
  		if (crc != cmnd->ddigest)
  			return -EIO;
  	}
-@@ -279,6 +269,6 @@ void digest_tx_data(struct iscsi_cmnd *c
+@@ -278,6 +268,6 @@ void digest_tx_data(struct iscsi_cmnd *c
  	struct iscsi_data_out_hdr *req = (struct iscsi_data_out_hdr *)&cmnd->pdu.bhs;
  
  	assert(tio);
@@ -177,7 +177,7 @@ Index: kernel/file-io.c
 ===================================================================
 --- kernel/file-io.c	(revision 105)
 +++ kernel/file-io.c	(working copy)
-@@ -52,9 +52,9 @@ static int fileio_make_request(struct ie
+@@ -53,9 +53,9 @@ static int fileio_make_request(struct ie
  		set_fs(get_ds());
  
  		if (rw == READ)

@@ -71,10 +71,22 @@ ifeq ($(call kver_lt,2,6,14),1)
 	UNSUPPORTED := true
 endif
 
-# Compatibility patch for RHEL4/CentOS4
-ifeq ($(call kver_lk,"2\.6\.9-.*\.(EL|plus\.c4)"),1)
-	PATCHES += compat-rhel4.patch
-	UNSUPPORTED :=
+# Compatibility patches for SuSE distros
+ifneq ($(wildcard /etc/SuSE-release),)
+	# Compatibility patch for SLES 10 SP2
+	ifeq ($(call kver_lk,"2\.6\.16\.60-.*"),1)
+		PATCHES += compat-sles10sp2.patch
+		UNSUPPORTED :=
+	endif
+endif
+
+# Compatibility patches for Redhat distros
+ifneq ($(wildcard /etc/redhat-release),)
+	# Compatibility patch for RHEL4/CentOS4
+	ifeq ($(call kver_lk,"2\.6\.9-.*\.(EL|plus\.c4)"),1)
+		PATCHES += compat-rhel4.patch
+		UNSUPPORTED :=
+	endif
 endif
 
 MANPAGES:= ietadm.8 ietd.8 ietd.conf.5

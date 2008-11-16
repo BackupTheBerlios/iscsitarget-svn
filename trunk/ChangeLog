@@ -21,6 +21,7 @@ Arne Redlich
 
 Ross S. W. Walker
   o 2.6.26 and SLES compile fix
+  o SLES 10 SP2 compat patch
 
 
 Summary of changes from v0.4.15 to v0.4.16

@@ -2,7 +2,7 @@ Index: kernel/block-io.c
 ===================================================================
 --- kernel/block-io.c	(working copy)
 +++ kernel/block-io.c	(revision 145)
-@@ -28,10 +28,15 @@ struct tio_work {
+@@ -29,10 +29,15 @@ struct tio_work {
  	struct completion tio_complete;
  };
  
@@ -19,7 +19,7 @@ Index: kernel/block-io.c
  	error = test_bit(BIO_UPTODATE, &bio->bi_flags) ? error : -EIO;
  
  	if (error)
-@@ -42,6 +47,8 @@ static void blockio_bio_endio(struct bio
+@@ -43,6 +48,8 @@ static void blockio_bio_endio(struct bio
  		complete(&tio_work->tio_complete);
  
  	bio_put(bio);
@@ -45,7 +45,7 @@ Index: kernel/digest.c
 ===================================================================
 --- kernel/digest.c	(working copy)
 +++ kernel/digest.c	(revision 145)
-@@ -161,17 +161,22 @@ static inline void __dbg_simulate_data_d
+@@ -160,17 +160,22 @@ static inline void __dbg_simulate_data_d
  	}
  }
  
@@ -72,7 +72,7 @@ Index: kernel/digest.c
  		nbytes += pdu->ahssize;
  	}
  
-@@ -215,7 +220,6 @@ static void digest_data(struct hash_desc
+@@ -214,7 +219,6 @@ static void digest_data(struct hash_desc
  
  	assert(count <= ISCSI_CONN_IOV_MAX);
  
@@ -80,7 +80,7 @@ Index: kernel/digest.c
  	crypto_hash_init(hash);
  
  	for (i = 0; size; i++) {
-@@ -224,13 +228,13 @@ static void digest_data(struct hash_desc
+@@ -223,13 +227,13 @@ static void digest_data(struct hash_desc
  		else
  			length = size;
  

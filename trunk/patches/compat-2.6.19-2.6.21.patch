@@ -16,7 +16,7 @@ Index: kernel/iscsi.c
 ===================================================================
 --- kernel/iscsi.c	(working copy)
 +++ kernel/iscsi.c	(revision 137)
-@@ -1757,7 +1757,8 @@ static int iscsi_init(void)
+@@ -1762,7 +1762,8 @@ static int iscsi_init(void)
  	if ((err = event_init()) < 0)
  		goto err;
  
