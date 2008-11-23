@@ -307,7 +307,7 @@ out:
 	return err;
 }
 
-void fileio_show(struct iet_volume *lu, struct seq_file *seq)
+static void fileio_show(struct iet_volume *lu, struct seq_file *seq)
 {
 	struct fileio_data *p = lu->private;
 	seq_printf(seq, " path:%s\n", p->path);
