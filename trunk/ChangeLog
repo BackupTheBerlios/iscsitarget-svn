@@ -1,6 +1,9 @@
 Summary of changes from v0.4.16 to v0.4.17
 =================================
 
+Charley Cheng
+  o handle the \0-termination of strings properly when building iSNS TLVs
+
 Denis ChengRq
   o fix stopping of wthreads that have never been awakened
 
@@ -22,6 +25,9 @@ Arne Redlich
 Ross S. W. Walker
   o 2.6.26 and SLES compile fix
   o SLES 10 SP2 compat patch
+
+Ming Zhang
+  o make needlessly global function static
 
 
 Summary of changes from v0.4.15 to v0.4.16
