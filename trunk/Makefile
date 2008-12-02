@@ -144,7 +144,7 @@ $(PATCHES): .patched.$(KVER)
 	if [ ! -e .patched.* ]; then \
 		for p in $(PATCHES); do \
 			echo "Applying Patch $$p"; \
-			patch -p0 < patches/$$p; \
+			patch -p1 < patches/$$p; \
 			echo $$p >>.patched.$(KVER); \
 		done; \
 	fi
@@ -157,7 +157,7 @@ unpatch:
 		done; \
 		for r in $$reverse; do \
 			echo "Reversing patch $$r"; \
-			patch -p0 -R < patches/$$r; \
+			patch -p1 -R < patches/$$r; \
 		done; \
 		rm -f .patched.*; \
 	fi

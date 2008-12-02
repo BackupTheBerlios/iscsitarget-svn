@@ -1,7 +1,7 @@
 Index: kernel/event.c
 ===================================================================
---- kernel/event.c	(working copy)
-+++ kernel/event.c	(revision 122)
+--- 1/kernel/event.c	(working copy)
++++ 2/kernel/event.c	(revision 122)
 @@ -95,8 +95,7 @@ int event_send(u32 tid, u64 sid, u32 cid
  
  int event_init(void)
@@ -14,8 +14,8 @@ Index: kernel/event.c
  	else
 Index: kernel/iscsi.c
 ===================================================================
---- kernel/iscsi.c	(working copy)
-+++ kernel/iscsi.c	(revision 137)
+--- 1/kernel/iscsi.c	(working copy)
++++ 2/kernel/iscsi.c	(revision 137)
 @@ -1762,7 +1762,8 @@ static int iscsi_init(void)
  	if ((err = event_init()) < 0)
  		goto err;
@@ -28,8 +28,8 @@ Index: kernel/iscsi.c
  
 Index: kernel/tio.c
 ===================================================================
---- kernel/tio.c	(working copy)
-+++ kernel/tio.c	(revision 137)
+--- 1/kernel/tio.c	(working copy)
++++ 2/kernel/tio.c	(revision 137)
 @@ -110,7 +110,8 @@ int tio_sync(struct iet_volume *lu, stru
  
  int tio_init(void)

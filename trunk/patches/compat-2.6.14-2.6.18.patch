@@ -1,7 +1,7 @@
 Index: kernel/iscsi.h
 ===================================================================
---- kernel/iscsi.h	(revision 105)
-+++ kernel/iscsi.h	(working copy)
+--- 1/kernel/iscsi.h	(revision 105)
++++ 2/kernel/iscsi.h	(working copy)
 @@ -241,8 +241,8 @@ struct iscsi_conn {
  	u32 write_offset;
  	int write_state;
@@ -15,8 +15,8 @@ Index: kernel/iscsi.h
  
 Index: kernel/digest.c
 ===================================================================
---- kernel/digest.c	(revision 105)
-+++ kernel/digest.c	(working copy)
+--- 1/kernel/digest.c	(revision 105)
++++ 2/kernel/digest.c	(working copy)
 @@ -12,8 +12,7 @@
  
  void digest_alg_available(unsigned int *val)
@@ -175,8 +175,8 @@ Index: kernel/digest.c
  }
 Index: kernel/file-io.c
 ===================================================================
---- kernel/file-io.c	(revision 105)
-+++ kernel/file-io.c	(working copy)
+--- 1/kernel/file-io.c	(revision 105)
++++ 2/kernel/file-io.c	(working copy)
 @@ -53,9 +53,9 @@ static int fileio_make_request(struct ie
  		set_fs(get_ds());
  
@@ -191,8 +191,8 @@ Index: kernel/file-io.c
  
 Index: kernel/iscsi.c
 ===================================================================
---- kernel/iscsi.c	(revision 105)
-+++ kernel/iscsi.c	(working copy)
+--- 1/kernel/iscsi.c	(revision 105)
++++ 2/kernel/iscsi.c	(working copy)
 @@ -15,7 +15,7 @@
  
  unsigned long debug_enable_flags;
@@ -204,8 +204,8 @@ Index: kernel/iscsi.c
  static int ctr_major;
 Index: kernel/tio.c
 ===================================================================
---- kernel/tio.c	(revision 105)
-+++ kernel/tio.c	(working copy)
+--- 1/kernel/tio.c	(revision 105)
++++ 2/kernel/tio.c	(working copy)
 @@ -35,7 +35,7 @@ static int tio_add_pages(struct tio *tio
  	return 0;
  }

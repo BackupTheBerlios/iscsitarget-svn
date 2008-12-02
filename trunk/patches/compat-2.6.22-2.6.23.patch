@@ -1,7 +1,7 @@
 Index: kernel/block-io.c
 ===================================================================
---- kernel/block-io.c	(working copy)
-+++ kernel/block-io.c	(revision 145)
+--- 1/kernel/block-io.c	(working copy)
++++ 2/kernel/block-io.c	(revision 145)
 @@ -29,10 +29,15 @@ struct tio_work {
  	struct completion tio_complete;
  };
@@ -30,8 +30,8 @@ Index: kernel/block-io.c
  /*
 Index: kernel/config.c
 ===================================================================
---- kernel/config.c	(working copy)
-+++ kernel/config.c	(revision 145)
+--- 1/kernel/config.c	(working copy)
++++ 2/kernel/config.c	(revision 145)
 @@ -40,7 +40,7 @@ int iet_procfs_init(void)
  	int i;
  	struct proc_dir_entry *ent;
@@ -43,8 +43,8 @@ Index: kernel/config.c
  	proc_iet_dir->owner = THIS_MODULE;
 Index: kernel/digest.c
 ===================================================================
---- kernel/digest.c	(working copy)
-+++ kernel/digest.c	(revision 145)
+--- 1/kernel/digest.c	(working copy)
++++ 2/kernel/digest.c	(revision 145)
 @@ -160,17 +160,22 @@ static inline void __dbg_simulate_data_d
  	}
  }
@@ -99,8 +99,8 @@ Index: kernel/digest.c
  }
 Index: kernel/event.c
 ===================================================================
---- kernel/event.c	(working copy)
-+++ kernel/event.c	(revision 145)
+--- 1/kernel/event.c	(working copy)
++++ 2/kernel/event.c	(revision 145)
 @@ -28,7 +28,7 @@ static int event_recv_msg(struct sk_buff
  	return 0;
  }

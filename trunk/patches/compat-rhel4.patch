@@ -1,5 +1,5 @@
---- kernel/config.c
-+++ kernel/config.c
+--- 1/kernel/config.c
++++ 2/kernel/config.c
 @@ -216,7 +216,7 @@ static int add_target(unsigned long ptr)
  	return err;
  }
@@ -17,8 +17,8 @@
 -	.compat_ioctl	= ioctl,
 +	.ioctl		= ioctl,
  };
---- kernel/event.c
-+++ kernel/event.c
+--- 1/kernel/event.c
++++ 2/kernel/event.c
 @@ -71,7 +72,7 @@ static int notify(void *data, int len, i
  	if (!(skb = alloc_skb(NLMSG_SPACE(len), gfp_mask)))
  		return -ENOMEM;

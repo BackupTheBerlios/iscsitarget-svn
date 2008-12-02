@@ -1,7 +1,7 @@
 Index: kernel/iscsi.h
 ===================================================================
---- kernel/iscsi.h.p	2008-11-11 12:00:45.000000000 -0500
-+++ kernel/iscsi.h	2008-11-11 12:00:59.000000000 -0500
+--- 1/kernel/iscsi.h.p	2008-11-11 12:00:45.000000000 -0500
++++ 2/kernel/iscsi.h	2008-11-11 12:00:59.000000000 -0500
 @@ -241,8 +241,8 @@ struct iscsi_conn {
  	u32 write_offset;
  	int write_state;
@@ -15,8 +15,8 @@ Index: kernel/iscsi.h
  
 Index: kernel/digest.c
 ===================================================================
---- kernel/digest.c.p	2008-11-11 12:00:53.000000000 -0500
-+++ kernel/digest.c	2008-11-11 12:01:38.000000000 -0500
+--- 1/kernel/digest.c.p	2008-11-11 12:00:53.000000000 -0500
++++ 2/kernel/digest.c	2008-11-11 12:01:38.000000000 -0500
 @@ -12,7 +12,8 @@
  
  void digest_alg_available(unsigned int *val)
