@@ -372,7 +372,7 @@ int isns_target_register(char *name)
 	uint16_t flags = 0, length = 0;
 	struct isns_hdr *hdr = (struct isns_hdr *) buf;
 	struct isns_tlv *tlv;
-	uint32_t port = htonl(ISCSI_LISTEN_PORT);
+	uint32_t port = htonl(server_port);
 	uint32_t node = htonl(ISNS_NODE_TARGET);
 	uint32_t type = htonl(2);
 	struct target *target;
