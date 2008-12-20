@@ -19,6 +19,13 @@
 
 #define PROC_SESSION	"/proc/net/iet/session"
 
+struct buf_segment {
+	struct __qelem entry;
+
+	unsigned int len;
+	char data[0];
+};
+
 struct PDU {
 	struct iscsi_hdr bhs;
 	void *ahs;
@@ -54,6 +61,7 @@ struct connection {
 	char *initiator;
 	union iscsi_sid sid;
 	u16 cid;
+
 	int session_type;
 	int auth_method;
 
@@ -63,11 +71,13 @@ struct connection {
 	u32 cmd_sn;
 	u32 exp_cmd_sn;
 	u32 max_cmd_sn;
+	u32 ttt;
 
 	struct PDU req;
 	void *req_buffer;
 	struct PDU rsp;
-	void *rsp_buffer;
+	struct __qelem rsp_buf_list;
+
 	unsigned char *buffer;
 	int rwsize;
 
@@ -146,6 +156,7 @@ extern void conn_take_fd(struct connection *conn, int fd);
 extern void conn_read_pdu(struct connection *conn);
 extern void conn_write_pdu(struct connection *conn);
 extern void conn_free_pdu(struct connection *conn);
+extern void conn_free_rsp_buf_list(struct connection *conn);
 
 /* ietd.c */
 extern uint16_t server_port;
