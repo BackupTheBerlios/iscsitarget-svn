@@ -151,8 +151,6 @@ static int iscsi_target_create(struct target_info *info, u32 tid)
 
 	atomic_set(&target->nr_volumes, 0);
 
-	list_add(&target->t_list, &target_list);
-
 	nthread_init(target);
 	wthread_init(target);
 
@@ -160,6 +158,8 @@ static int iscsi_target_create(struct target_info *info, u32 tid)
 		target_thread_stop(target);
 		goto out;
 	}
+
+	list_add(&target->t_list, &target_list);
 
 	return 0;
 out:
