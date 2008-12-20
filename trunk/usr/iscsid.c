@@ -694,43 +694,31 @@ static void cmnd_exec_logout(struct connection *conn)
 
 int cmnd_execute(struct connection *conn)
 {
-	int res = 1;
-
 	switch (conn->req.bhs.opcode & ISCSI_OPCODE_MASK) {
 	case ISCSI_OP_LOGIN_CMD:
 		//if conn->state == STATE_FULL -> reject
 		cmnd_exec_login(conn);
-		conn->rsp.bhs.ahslength = conn->rsp.ahssize / 4;
-		conn->rsp.bhs.datalength[0] = conn->rsp.datasize >> 16;
-		conn->rsp.bhs.datalength[1] = conn->rsp.datasize >> 8;
-		conn->rsp.bhs.datalength[2] = conn->rsp.datasize;
-		log_pdu(2, &conn->rsp);
 		break;
 	case ISCSI_OP_TEXT_CMD:
 		//if conn->state != STATE_FULL -> reject
 		cmnd_exec_text(conn);
-		conn->rsp.bhs.ahslength = conn->rsp.ahssize / 4;
-		conn->rsp.bhs.datalength[0] = conn->rsp.datasize >> 16;
-		conn->rsp.bhs.datalength[1] = conn->rsp.datasize >> 8;
-		conn->rsp.bhs.datalength[2] = conn->rsp.datasize;
-		log_pdu(2, &conn->rsp);
 		break;
 	case ISCSI_OP_LOGOUT_CMD:
 		//if conn->state != STATE_FULL -> reject
 		cmnd_exec_logout(conn);
-		conn->rsp.bhs.ahslength = conn->rsp.ahssize / 4;
-		conn->rsp.bhs.datalength[0] = conn->rsp.datasize >> 16;
-		conn->rsp.bhs.datalength[1] = conn->rsp.datasize >> 8;
-		conn->rsp.bhs.datalength[2] = conn->rsp.datasize;
-		log_pdu(2, &conn->rsp);
 		break;
 	default:
 		//reject
-		res = 0;
-		break;
+		return 0;
 	}
 
-	return res;
+	conn->rsp.bhs.ahslength = conn->rsp.ahssize / 4;
+	conn->rsp.bhs.datalength[0] = conn->rsp.datasize >> 16;
+	conn->rsp.bhs.datalength[1] = conn->rsp.datasize >> 8;
+	conn->rsp.bhs.datalength[2] = conn->rsp.datasize;
+	log_pdu(2, &conn->rsp);
+
+	return 1;
 }
 
 void cmnd_finish(struct connection *conn)
