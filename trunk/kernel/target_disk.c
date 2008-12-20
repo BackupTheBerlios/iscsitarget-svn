@@ -332,14 +332,18 @@ static int build_request_sense_response(struct iscsi_cmnd *cmnd)
 	return 0;
 }
 
-static int build_service_action_response(struct iscsi_cmnd *cmnd)
+static int build_service_action_in_response(struct iscsi_cmnd *cmnd)
 {
 	struct tio *tio = cmnd->tio;
 	u32 *data;
 	u64 *data64;
 
-/* 	assert((req->scb[1] & 0x1f) == 0x10); */
 	assert(!tio);
+
+	/* only READ_CAPACITY_16 service action is currently supported */
+	if ((cmnd_hdr(cmnd)->scb[1] & 0x1F) != 0x10)
+		return -1;
+
 	tio = cmnd->tio = tio_alloc(1);
 	data = page_address(tio->pvec[0]);
 	assert(data);
@@ -445,7 +449,7 @@ static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 		send_data_rsp(cmnd, build_request_sense_response);
 		break;
 	case SERVICE_ACTION_IN:
-		send_data_rsp(cmnd, build_service_action_response);
+		send_data_rsp(cmnd, build_service_action_in_response);
 		break;
 	case READ_6:
 	case READ_10:
