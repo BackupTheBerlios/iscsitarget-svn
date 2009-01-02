@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <netdb.h>
+#include <signal.h>
 
 #include <sys/poll.h>
 #include <sys/socket.h>
@@ -433,6 +434,10 @@ int main(int argc, char **argv)
 	gid_t gid = 0;
 	char *isns = NULL;
 	int isns_ac = 0;
+
+	/* otherwise we would die in some later write() during the event_loop
+	 * instead of getting EPIPE! */
+	signal(SIGPIPE, SIG_IGN);
 
 	while ((ch = getopt_long(argc, argv, "c:fd:s:u:g:a:p:vh", long_options, &longindex)) >= 0) {
 		switch (ch) {
