@@ -55,12 +55,15 @@ static int insert_iec_m_pg(u8 *ptr)
 	return sizeof(iec_m_pg);
 }
 
-static int insert_format_m_pg(u8 *ptr)
+static int insert_format_m_pg(u8 *ptr, u32 sector_size)
 {
 	unsigned char format_m_pg[] = {0x03, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				       0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00,
 				       0x00, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00};
+
 	memcpy(ptr, format_m_pg, sizeof(format_m_pg));
+	ptr[12] = (sector_size >> 8) & 0xff;
+	ptr[13] = sector_size & 0xff;
 	return sizeof(format_m_pg);
 }
 
@@ -121,7 +124,7 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 		len += insert_disconnect_pg(data + len);
 		break;
 	case 0x3:
-		len += insert_format_m_pg(data + len);
+		len += insert_format_m_pg(data + len, 1 << cmnd->lun->blk_shift);
 		break;
 	case 0x4:
 		len += insert_geo_m_pg(data + len, cmnd->lun->blk_cnt);
@@ -138,7 +141,7 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 		break;
 	case 0x3f:
 		len += insert_disconnect_pg(data + len);
-		len += insert_format_m_pg(data + len);
+		len += insert_format_m_pg(data + len, 1 << cmnd->lun->blk_shift);
 		len += insert_geo_m_pg(data + len, cmnd->lun->blk_cnt);
 		len += insert_caching_pg(data + len, LUWCache(cmnd->lun),
 					 LURCache(cmnd->lun));
