@@ -1779,7 +1779,9 @@ err:
 	return err;
 }
 
-module_param(debug_enable_flags, ulong, S_IRUGO);
+module_param(debug_enable_flags, ulong, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(debug_enable_flags,
+		 "debug bitmask, low bits (0 ... 8) used, see iscsi_dbg.h");
 
 module_init(iscsi_init);
 module_exit(iscsi_exit);
