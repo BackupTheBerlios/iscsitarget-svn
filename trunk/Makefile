@@ -57,7 +57,7 @@ ifeq ($(call kver_le,2,6,27),1)
 endif
 
 # Compatibility patch for kernels <= 2.6.24
-ifeq ($(call kver_le,2,6,27),1)
+ifeq ($(call kver_le,2,6,24),1)
 	PATCHES := $(PATCHES) compat-2.6.24.patch
 endif
 
