@@ -154,14 +154,14 @@ blockio_open_path(struct iet_volume *volume, const char *path)
 {
 	struct blockio_data *bio_data = volume->private;
 	struct block_device *bdev;
-	int flags = FMODE_READ | (LUReadonly(volume) ? 0 : FMODE_WRITE);
+	int flags = LUReadonly(volume) ? MS_RDONLY : 0;
 	int err = 0;
 
 	bio_data->path = kstrdup(path, GFP_KERNEL);
 	if (!bio_data->path)
 		return -ENOMEM;
 
-	bdev = open_bdev_exclusive(path, flags, THIS_MODULE);
+	bdev = open_bdev_excl(path, flags, THIS_MODULE);
 	if (IS_ERR(bdev)) {
 		err = PTR_ERR(bdev);
 		eprintk("Can't open device %s, error %d\n", path, err);
@@ -323,10 +323,9 @@ static void
 blockio_detach(struct iet_volume *volume)
 {
 	struct blockio_data *bio_data = volume->private;
-	int flags = FMODE_READ | (LUReadonly(volume) ? 0 : FMODE_WRITE);
 
 	if (bio_data->bdev)
-		close_bdev_exclusive(bio_data->bdev, flags);
+		close_bdev_excl(bio_data->bdev);
 	kfree(bio_data->path);
 
 	kfree(volume->private);

@@ -92,5 +92,6 @@ int event_init(void)
 
 void event_exit(void)
 {
-	netlink_kernel_release(nl);
+	if (nl)
+		sock_release(nl->sk_socket);
 }

@@ -324,6 +324,7 @@ extern void target_unlock(struct iscsi_target *);
 struct iscsi_target *target_lookup_by_id(u32);
 extern int target_add(struct target_info *);
 extern int target_del(u32 id);
+extern struct seq_operations iet_seq_op;
 
 /* config.c */
 extern int iet_procfs_init(void);
