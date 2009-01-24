@@ -51,9 +51,14 @@ kver_lk = $(shell [ `echo $(KVER) | egrep $(1)` ] && echo 1 || echo 0)
 # base first the earlier patch sets will not need to be modified.
 #
 
-# Compatibility patch for kernels >= 2.6.24 and <= 2.6.27
+# Compatibility patch for kernels >= 2.6.25 and <= 2.6.27
 ifeq ($(call kver_le,2,6,27),1)
-	PATCHES := $(PATCHES) compat-2.6.24-2.6.27.patch
+	PATCHES := $(PATCHES) compat-2.6.25-2.6.27.patch
+endif
+
+# Compatibility patch for kernels <= 2.6.24
+ifeq ($(call kver_le,2,6,27),1)
+	PATCHES := $(PATCHES) compat-2.6.24.patch
 endif
 
 # Compatibility patch for kernels >= 2.6.22 and <= 2.6.23
