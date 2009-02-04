@@ -114,7 +114,8 @@ struct iscsi_target {
 	struct list_head session_list;
 
 	struct network_thread_info nthread_info;
-	struct worker_thread_info wthread_info;
+	/* Points either to own list or global pool */
+	struct worker_thread_info * wthread_info;
 
 	struct semaphore target_sem;
 };
@@ -287,6 +288,7 @@ struct iscsi_cmnd {
 #define ISCSI_OP_SCSI_ABORT	ISCSI_OP_VENDOR4_CMD
 
 /* iscsi.c */
+extern unsigned long worker_thread_pool_size;
 extern struct iscsi_cmnd *cmnd_alloc(struct iscsi_conn *, int);
 extern void cmnd_rx_start(struct iscsi_cmnd *);
 extern void cmnd_rx_end(struct iscsi_cmnd *);
@@ -312,11 +314,14 @@ extern void __nthread_wakeup(struct network_thread_info *);
 extern void nthread_wakeup(struct iscsi_target *);
 
 /* wthread.c */
-extern int wthread_init(struct iscsi_target *);
-extern int wthread_start(struct iscsi_target *);
-extern int wthread_stop(struct iscsi_target *);
+extern int wthread_init(struct worker_thread_info *info);
+extern int wthread_start(struct worker_thread_info *info, int wthreads, u32 tid);
+extern int wthread_stop(struct worker_thread_info *info);
 extern void wthread_queue(struct iscsi_cmnd *);
 extern struct target_type *target_type_array[];
+extern int wthread_module_init(void);
+extern void wthread_module_exit(void);
+extern struct worker_thread_info *worker_thread_pool;
 
 /* target.c */
 extern int target_lock(struct iscsi_target *, int);

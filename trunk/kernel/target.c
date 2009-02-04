@@ -100,8 +100,11 @@ static int target_thread_start(struct iscsi_target *target)
 	if ((err = nthread_start(target)) < 0)
 		return err;
 
-	if ((err = wthread_start(target)) < 0) {
-		nthread_stop(target);
+	if (!worker_thread_pool) {
+		err = wthread_start(target->wthread_info,
+				    target->trgt_param.wthreads, target->tid);
+		if (err)
+			nthread_stop(target);
 	}
 
 	return err;
@@ -109,7 +112,9 @@ static int target_thread_start(struct iscsi_target *target)
 
 static void target_thread_stop(struct iscsi_target *target)
 {
-	wthread_stop(target);
+	if (!worker_thread_pool)
+		wthread_stop(target->wthread_info);
+
 	nthread_stop(target);
 }
 
@@ -137,6 +142,14 @@ static int iscsi_target_create(struct target_info *info, u32 tid)
 		goto out;
 	}
 
+	if (!worker_thread_pool) {
+		target->wthread_info = kmalloc(sizeof(struct worker_thread_info), GFP_KERNEL);
+		if (!target->wthread_info) {
+			err = -ENOMEM;
+			goto out;
+		}
+	}
+
 	target->tid = info->tid = tid;
 
 	memcpy(&target->sess_param, &default_session_param, sizeof(default_session_param));
@@ -152,7 +165,12 @@ static int iscsi_target_create(struct target_info *info, u32 tid)
 	atomic_set(&target->nr_volumes, 0);
 
 	nthread_init(target);
-	wthread_init(target);
+
+	if (!worker_thread_pool)
+		wthread_init(target->wthread_info);
+	else
+		target->wthread_info = worker_thread_pool;
+
 
 	if ((err = target_thread_start(target)) < 0) {
 		target_thread_stop(target);
@@ -163,6 +181,8 @@ static int iscsi_target_create(struct target_info *info, u32 tid)
 
 	return 0;
 out:
+	if (!worker_thread_pool)
+		kfree(target->wthread_info);
 	kfree(target);
 	module_put(THIS_MODULE);
 
@@ -217,6 +237,8 @@ static void target_destroy(struct iscsi_target *target)
 		iscsi_volume_destroy(volume);
 	}
 
+	if (!worker_thread_pool)
+		kfree(target->wthread_info);
 	kfree(target);
 
 	module_put(THIS_MODULE);

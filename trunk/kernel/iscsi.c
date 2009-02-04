@@ -14,6 +14,7 @@
 #include "iotype.h"
 
 unsigned long debug_enable_flags;
+unsigned long worker_thread_pool_size;
 
 static struct kmem_cache *iscsi_cmnd_cache;
 static u8 dummy_data[PAGE_SIZE];
@@ -1731,6 +1732,8 @@ void cmnd_rx_end(struct iscsi_cmnd *cmnd)
 
 static void iscsi_exit(void)
 {
+	wthread_module_exit();
+
 	unregister_chrdev(ctr_major, ctr_name);
 
 	iet_procfs_exit();
@@ -1772,12 +1775,20 @@ static int iscsi_init(void)
 	if ((err = iotype_init()) < 0)
 		goto err;
 
+	if ((err = wthread_module_init()) < 0)
+		goto err;
+
 	return 0;
 
 err:
 	iscsi_exit();
 	return err;
 }
+
+module_param(worker_thread_pool_size, ulong, S_IRUGO);
+MODULE_PARM_DESC(worker_thread_pool_size,
+		 "Size of the worker thread pool "
+		 "(0 = dedicated threads per target (default))");
 
 module_param(debug_enable_flags, ulong, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(debug_enable_flags,
