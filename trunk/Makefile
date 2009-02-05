@@ -61,9 +61,14 @@ ifeq ($(call kver_le,2,6,24),1)
 	PATCHES := $(PATCHES) compat-2.6.24.patch
 endif
 
-# Compatibility patch for kernels >= 2.6.22 and <= 2.6.23
+# Compatibility patch for kernels <= 2.6.23
 ifeq ($(call kver_le,2,6,23),1)
-	PATCHES := $(PATCHES) compat-2.6.22-2.6.23.patch
+	PATCHES := $(PATCHES) compat-2.6.23.patch
+endif
+
+# Compatibility patch for kernels <= 2.6.22
+ifeq ($(call kver_le,2,6,22),1)
+	PATCHES := $(PATCHES) compat-2.6.22.patch
 endif
 
 # Compatibility patch for kernels >= 2.6.19 and <= 2.6.21
