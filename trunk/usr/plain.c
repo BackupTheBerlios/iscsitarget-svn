@@ -241,14 +241,13 @@ static int plain_account_add(u32 tid, int dir, char *name, char *pass)
 	list = account_list_get(tid, dir);
 	log_error("list: %p\n", list);
 	if (dir == AUTH_DIR_OUTGOING) {
-		struct user *old;
-		list_for_each_entry(old, list, ulist) {
+		struct user *old, *tmp;
+		list_for_each_entry_safe(old, tmp, list, ulist) {
 			if (tid != old->tid)
 				continue;
 			log_warning("Only one outgoing %s account is supported."
 				    " Replacing the old one.\n",
 				    tid ? "target" : "discovery");
-			old = list_entry(list->q_forw, struct user, ulist);
 			account_destroy(old);
 		}
 	}
