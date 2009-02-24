@@ -239,7 +239,6 @@ static int plain_account_add(u32 tid, int dir, char *name, char *pass)
 
 	user->tid = tid;
 	list = account_list_get(tid, dir);
-	log_error("list: %p\n", list);
 	if (dir == AUTH_DIR_OUTGOING) {
 		struct user *old, *tmp;
 		list_for_each_entry_safe(old, tmp, list, ulist) {
