@@ -455,7 +455,7 @@ static void login_start(struct connection *conn)
 
 		if (ki->param_get(conn->tid, 0, key_session,
 				  conn->session_param)) {
-			rsp->status_class = ISCSI_STATUS_TARGET_ERROR;
+			rsp->status_class = ISCSI_STATUS_TARGET_ERR;
 			rsp->status_detail = ISCSI_STATUS_SVC_UNAVAILABLE;
 			conn->state = STATE_EXIT;
 		}
