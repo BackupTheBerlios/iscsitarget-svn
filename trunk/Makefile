@@ -207,7 +207,7 @@ install-usr: usr/ietd usr/ietadm
 
 install-etc: install-initd
 	@if [ ! -e $(DISTDIR)/etc/ietd.conf ]; then \
-		install -vD -m 644 etc/ietd.conf \
+		install -vD -m 640 etc/ietd.conf \
 			$(DISTDIR)/etc/ietd.conf; \
 	fi
 	@if [ ! -e $(DISTDIR)/etc/initiators.allow ]; then \
