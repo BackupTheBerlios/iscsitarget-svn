@@ -54,7 +54,7 @@ void log_error(const char *fmt, ...)
 
 void log_debug(int level, const char *fmt, ...)
 {
-	if (log_level > level) {
+	if (log_level >= level) {
 		va_list ap;
 		va_start(ap, fmt);
 		dolog(LOG_DEBUG, fmt, ap);

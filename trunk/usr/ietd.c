@@ -414,7 +414,7 @@ void event_loop(int timeout)
 
 		conn_close:
 			if (conn->state == STATE_CLOSE) {
-				log_debug(0, "connection closed");
+				log_debug(1, "connection closed");
 				conn_free_pdu(conn);
 				conn_free(conn);
 				close(pollfd->fd);
