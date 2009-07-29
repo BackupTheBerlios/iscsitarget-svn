@@ -17,6 +17,8 @@
 #include "iscsi_hdr.h"
 #include "iet_u.h"
 
+#define IET_SENSE_BUF_SIZE      14
+
 struct iscsi_sess_param {
 	int initial_r2t;
 	int immediate_data;
@@ -270,6 +272,8 @@ struct iscsi_cmnd {
 
 	struct tio *tio;
 
+	u8 status;
+
 	u32 r2t_sn;
 	u32 r2t_length;
 	u32 is_unsolicited_data;
@@ -280,6 +284,8 @@ struct iscsi_cmnd {
 	u32 ddigest;
 
 	struct iscsi_cmnd *req;
+
+	unsigned char sense_buf[IET_SENSE_BUF_SIZE];
 };
 
 #define ISCSI_OP_SCSI_REJECT	ISCSI_OP_VENDOR1_CMD
@@ -295,8 +301,10 @@ extern void cmnd_rx_end(struct iscsi_cmnd *);
 extern void cmnd_tx_start(struct iscsi_cmnd *);
 extern void cmnd_tx_end(struct iscsi_cmnd *);
 extern void cmnd_release(struct iscsi_cmnd *, int);
-extern void send_data_rsp(struct iscsi_cmnd *, int (*)(struct iscsi_cmnd *));
-extern void send_scsi_rsp(struct iscsi_cmnd *, int (*)(struct iscsi_cmnd *));
+extern void send_data_rsp(struct iscsi_cmnd *, void (*)(struct iscsi_cmnd *));
+extern void send_scsi_rsp(struct iscsi_cmnd *, void (*)(struct iscsi_cmnd *));
+extern void iscsi_cmnd_set_sense(struct iscsi_cmnd *, u8 sense_key, u8 asc,
+				 u8 ascq);
 
 /* conn.c */
 extern struct iscsi_conn *conn_lookup(struct iscsi_session *, u16);

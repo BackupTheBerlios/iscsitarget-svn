@@ -84,7 +84,7 @@ static int insert_geo_m_pg(u8 *ptr, u64 sec)
 	return sizeof(geo_m_pg);
 }
 
-static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
+static void build_mode_sense_response(struct iscsi_cmnd *cmnd)
 {
 	struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
 	struct tio *tio = cmnd->tio;
@@ -94,7 +94,7 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 
 	/* changeable parameter mode pages are unsupported */
 	if ((scb[2] & 0xc0) >> 6 == 0x1)
-		return -1;
+		goto set_sense;
 
 	pcode = req->scb[2] & 0x3f;
 
@@ -152,14 +152,20 @@ static int build_mode_sense_response(struct iscsi_cmnd *cmnd)
 		err = -1;
 	}
 
-	data[0] = len - 1;
+	if (!err) {
+		data[0] = len - 1;
+		tio_set(tio, len, 0);
+		return;
+	}
 
-	tio_set(tio, len, 0);
-
-	return err;
+	tio_put(tio);
+	cmnd->tio = NULL;
+ set_sense:
+	/* Invalid Field In CDB */
+	iscsi_cmnd_set_sense(cmnd, ILLEGAL_REQUEST, 0x24, 0x0);
 }
 
-static int build_inquiry_response(struct iscsi_cmnd *cmnd)
+static void build_inquiry_response(struct iscsi_cmnd *cmnd)
 {
 	struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
 	struct tio *tio = cmnd->tio;
@@ -172,7 +178,7 @@ static int build_inquiry_response(struct iscsi_cmnd *cmnd)
 	 * - CmdDt set: not supported
 	 */
 	if ((scb[1] & 0x3) > 0x1 || (!(scb[1] & 0x3) && scb[2]))
-		return err;
+		goto set_sense;
 
 	assert(!tio);
 	tio = cmnd->tio = tio_alloc(1);
@@ -245,14 +251,21 @@ static int build_inquiry_response(struct iscsi_cmnd *cmnd)
 		}
 	}
 
-	tio_set(tio, min_t(u8, tio->size, scb[4]), 0);
-	if (!cmnd->lun)
-		data[0] = TYPE_NO_LUN;
+	if (!err) {
+		tio_set(tio, min_t(u8, tio->size, scb[4]), 0);
+		if (!cmnd->lun)
+			data[0] = TYPE_NO_LUN;
+		return;
+	}
 
-	return err;
+	tio_put(tio);
+	cmnd->tio = NULL;
+ set_sense:
+	/* Invalid Field In CDB */
+	iscsi_cmnd_set_sense(cmnd, ILLEGAL_REQUEST, 0x24, 0x0);
 }
 
-static int build_report_luns_response(struct iscsi_cmnd *cmnd)
+static void build_report_luns_response(struct iscsi_cmnd *cmnd)
 {
 	struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
 	struct tio *tio = cmnd->tio;
@@ -262,8 +275,11 @@ static int build_report_luns_response(struct iscsi_cmnd *cmnd)
 
 	size = (u32)req->scb[6] << 24 | (u32)req->scb[7] << 16 |
 		(u32)req->scb[8] << 8 | (u32)req->scb[9];
-	if (size < 16)
-		return -1;
+	if (size < 16) {
+		/* Invalid Field In CDB */
+		iscsi_cmnd_set_sense(cmnd, ILLEGAL_REQUEST, 0x24, 0x0);
+		return;
+	}
 
 	len = atomic_read(&cmnd->conn->session->target->nr_volumes) * 8;
 	size = min(size & ~(8 - 1), len + 8);
@@ -293,11 +309,9 @@ static int build_report_luns_response(struct iscsi_cmnd *cmnd)
 			rest = PAGE_CACHE_SIZE;
 		}
 	}
-
-	return 0;
 }
 
-static int build_read_capacity_response(struct iscsi_cmnd *cmnd)
+static void build_read_capacity_response(struct iscsi_cmnd *cmnd)
 {
 	struct tio *tio = cmnd->tio;
 	u32 *data;
@@ -313,10 +327,9 @@ static int build_read_capacity_response(struct iscsi_cmnd *cmnd)
 	data[1] = cpu_to_be32(1U << cmnd->lun->blk_shift);
 
 	tio_set(tio, 8, 0);
-	return 0;
 }
 
-static int build_request_sense_response(struct iscsi_cmnd *cmnd)
+static void build_request_sense_response(struct iscsi_cmnd *cmnd)
 {
 	struct tio *tio = cmnd->tio;
 	u8 *data;
@@ -331,11 +344,9 @@ static int build_request_sense_response(struct iscsi_cmnd *cmnd)
 	data[2] = NO_SENSE;
 	data[7] = 10;
 	tio_set(tio, 18, 0);
-
-	return 0;
 }
 
-static int build_service_action_in_response(struct iscsi_cmnd *cmnd)
+static void build_service_action_in_response(struct iscsi_cmnd *cmnd)
 {
 	struct tio *tio = cmnd->tio;
 	u32 *data;
@@ -344,8 +355,11 @@ static int build_service_action_in_response(struct iscsi_cmnd *cmnd)
 	assert(!tio);
 
 	/* only READ_CAPACITY_16 service action is currently supported */
-	if ((cmnd_hdr(cmnd)->scb[1] & 0x1F) != 0x10)
-		return -1;
+	if ((cmnd_hdr(cmnd)->scb[1] & 0x1F) != 0x10) {
+		/* Invalid Field In CDB */
+		iscsi_cmnd_set_sense(cmnd, ILLEGAL_REQUEST, 0x24, 0x0);
+		return;
+	}
 
 	tio = cmnd->tio = tio_alloc(1);
 	data = page_address(tio->pvec[0]);
@@ -356,20 +370,21 @@ static int build_service_action_in_response(struct iscsi_cmnd *cmnd)
 	data[2] = cpu_to_be32(1UL << cmnd->lun->blk_shift);
 
 	tio_set(tio, 12, 0);
-	return 0;
 }
 
-static int build_read_response(struct iscsi_cmnd *cmnd)
+static void build_read_response(struct iscsi_cmnd *cmnd)
 {
 	struct tio *tio = cmnd->tio;
 
 	assert(tio);
 	assert(cmnd->lun);
 
-	return tio_read(cmnd->lun, tio);
+	if (tio_read(cmnd->lun, tio))
+		/* Medium Error/Unrecovered Read Error */
+		iscsi_cmnd_set_sense(cmnd, MEDIUM_ERROR, 0x11, 0x0);
 }
 
-static int build_write_response(struct iscsi_cmnd *cmnd)
+static void build_write_response(struct iscsi_cmnd *cmnd)
 {
 	int err;
 	struct tio *tio = cmnd->tio;
@@ -382,34 +397,49 @@ static int build_write_response(struct iscsi_cmnd *cmnd)
 	if (!err && !LUWCache(cmnd->lun))
 		err = tio_sync(cmnd->lun, tio);
 
-	return err;
+	if (err)
+		/* Medium Error/Write Fault */
+		iscsi_cmnd_set_sense(cmnd, MEDIUM_ERROR, 0x03, 0x0);
 }
 
-static int build_sync_cache_response(struct iscsi_cmnd *cmnd)
+static void build_sync_cache_response(struct iscsi_cmnd *cmnd)
 {
 	assert(cmnd->lun);
-	return tio_sync(cmnd->lun, NULL);
+	if (tio_sync(cmnd->lun, NULL))
+		/* Medium Error/Write Fault */
+		iscsi_cmnd_set_sense(cmnd, MEDIUM_ERROR, 0x03, 0x0);
 }
 
-static int build_generic_response(struct iscsi_cmnd *cmnd)
+static void build_generic_response(struct iscsi_cmnd *cmnd)
 {
-	return 0;
+	return;
 }
 
-static int build_reserve_response(struct iscsi_cmnd *cmnd)
+static void build_reserve_response(struct iscsi_cmnd *cmnd)
 {
-	return volume_reserve(cmnd->lun, cmnd->conn->session->sid);
+	switch (volume_reserve(cmnd->lun, cmnd->conn->session->sid)) {
+	case -ENOENT:
+		/* Logical Unit Not Supported (?) */
+		iscsi_cmnd_set_sense(cmnd, ILLEGAL_REQUEST, 0x25, 0x0);
+		break;
+	case -EBUSY:
+		cmnd->status = SAM_STAT_RESERVATION_CONFLICT;
+		break;
+	default:
+		break;
+	}
 }
 
-static int build_release_response(struct iscsi_cmnd *cmnd)
+static void build_release_response(struct iscsi_cmnd *cmnd)
 {
-	return volume_release(cmnd->lun,
-			      cmnd->conn->session->sid, 0);
+	if (volume_release(cmnd->lun,
+			   cmnd->conn->session->sid, 0))
+		cmnd->status = SAM_STAT_RESERVATION_CONFLICT;
 }
 
-static int build_reservation_conflict_response(struct iscsi_cmnd *cmnd)
+static void build_reservation_conflict_response(struct iscsi_cmnd *cmnd)
 {
-	return -EBUSY;
+	cmnd->status = SAM_STAT_RESERVATION_CONFLICT;
 }
 
 static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)

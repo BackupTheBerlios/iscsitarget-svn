@@ -302,25 +302,6 @@ static struct iscsi_cmnd *create_scsi_rsp(struct iscsi_cmnd *req)
 	struct iscsi_cmnd *rsp;
 	struct iscsi_scsi_cmd_hdr *req_hdr = cmnd_hdr(req);
 	struct iscsi_scsi_rsp_hdr *rsp_hdr;
-
-	rsp = iscsi_cmnd_create_rsp_cmnd(req, 1);
-
-	rsp_hdr = (struct iscsi_scsi_rsp_hdr *)&rsp->pdu.bhs;
-	rsp_hdr->opcode = ISCSI_OP_SCSI_RSP;
-	rsp_hdr->flags = ISCSI_FLG_FINAL;
-	rsp_hdr->response = ISCSI_RESPONSE_COMMAND_COMPLETED;
-	rsp_hdr->cmd_status = SAM_STAT_GOOD;
-	rsp_hdr->itt = req_hdr->itt;
-
-	return rsp;
-}
-
-static struct iscsi_cmnd *create_sense_rsp(struct iscsi_cmnd *req,
-					   u8 sense_key, u8 asc, u8 ascq)
-{
-	struct iscsi_cmnd *rsp;
-	struct iscsi_scsi_rsp_hdr *rsp_hdr;
-	struct tio *tio;
 	struct iscsi_sense_data *sense;
 
 	rsp = iscsi_cmnd_create_rsp_cmnd(req, 1);
@@ -329,72 +310,86 @@ static struct iscsi_cmnd *create_sense_rsp(struct iscsi_cmnd *req,
 	rsp_hdr->opcode = ISCSI_OP_SCSI_RSP;
 	rsp_hdr->flags = ISCSI_FLG_FINAL;
 	rsp_hdr->response = ISCSI_RESPONSE_COMMAND_COMPLETED;
-	rsp_hdr->cmd_status = SAM_STAT_CHECK_CONDITION;
-	rsp_hdr->itt = cmnd_hdr(req)->itt;
+	rsp_hdr->cmd_status = req->status;
+	rsp_hdr->itt = req_hdr->itt;
 
-	tio = rsp->tio = tio_alloc(1);
-	sense = (struct iscsi_sense_data *) page_address(tio->pvec[0]);
-	assert(sense);
-	clear_page(sense);
-	sense->length = cpu_to_be16(14);
-	sense->data[0] = 0xf0;
-	sense->data[2] = sense_key;
-	sense->data[7] = 6;	// Additional sense length
-	sense->data[12] = asc;
-	sense->data[13] = ascq;
+	if (req->status == SAM_STAT_CHECK_CONDITION) {
+		assert(!rsp->tio);
+		rsp->tio = tio_alloc(1);
+		sense = (struct iscsi_sense_data *)
+			page_address(rsp->tio->pvec[0]);
 
-	rsp->pdu.datasize = sizeof(struct iscsi_sense_data) + 14;
-	tio->size = (rsp->pdu.datasize + 3) & -4;
-	tio->offset = 0;
+		assert(sense);
+		clear_page(sense);
+		sense->length = cpu_to_be16(IET_SENSE_BUF_SIZE);
+
+		memcpy(sense->data, req->sense_buf, IET_SENSE_BUF_SIZE);
+		rsp->pdu.datasize = sizeof(struct iscsi_sense_data) +
+			IET_SENSE_BUF_SIZE;
+
+		rsp->tio->size = (rsp->pdu.datasize + 3) & -4;
+		rsp->tio->offset = 0;
+	}
 
 	return rsp;
 }
 
-void send_scsi_rsp(struct iscsi_cmnd *req, int (*func)(struct iscsi_cmnd *))
+void iscsi_cmnd_set_sense(struct iscsi_cmnd *cmnd, u8 sense_key, u8 asc,
+			  u8 ascq)
+{
+	cmnd->status = SAM_STAT_CHECK_CONDITION;
+
+	cmnd->sense_buf[0] = 0xf0;
+	cmnd->sense_buf[2] = sense_key;
+	cmnd->sense_buf[7] = 6;	// Additional sense length
+	cmnd->sense_buf[12] = asc;
+	cmnd->sense_buf[13] = ascq;
+}
+
+static struct iscsi_cmnd *create_sense_rsp(struct iscsi_cmnd *req,
+					   u8 sense_key, u8 asc, u8 ascq)
+{
+	iscsi_cmnd_set_sense(req, sense_key, asc, ascq);
+	return create_scsi_rsp(req);
+}
+
+void send_scsi_rsp(struct iscsi_cmnd *req, void (*func)(struct iscsi_cmnd *))
 {
 	struct iscsi_cmnd *rsp;
 	struct iscsi_scsi_rsp_hdr *rsp_hdr;
 	u32 size;
-	int ret = func(req);
 
-	switch (ret) {
-	case 0:
-	case -EBUSY:
-		rsp = create_scsi_rsp(req);
+	func(req);
+	rsp = create_scsi_rsp(req);
+
+	switch (req->status) {
+	case SAM_STAT_GOOD:
+	case SAM_STAT_RESERVATION_CONFLICT:
 		rsp_hdr = (struct iscsi_scsi_rsp_hdr *) &rsp->pdu.bhs;
 		if ((size = cmnd_read_size(req)) != 0) {
 			rsp_hdr->flags |= ISCSI_FLG_RESIDUAL_UNDERFLOW;
 			rsp_hdr->residual_count = cpu_to_be32(size);
 		}
-		if (ret == -EBUSY)
-			rsp_hdr->cmd_status = SAM_STAT_RESERVATION_CONFLICT;
-		break;
-	case -EIO:
-		/* Medium Error/Write Fault */
-		rsp = create_sense_rsp(req, MEDIUM_ERROR, 0x03, 0x0);
 		break;
 	default:
-		rsp = create_sense_rsp(req, ILLEGAL_REQUEST, 0x24, 0x0);
+		break;
 	}
+
 	iscsi_cmnd_init_write(rsp);
 }
 
-void send_data_rsp(struct iscsi_cmnd *req, int (*func)(struct iscsi_cmnd *))
+void send_data_rsp(struct iscsi_cmnd *req, void (*func)(struct iscsi_cmnd *))
 {
 	struct iscsi_cmnd *rsp;
 
-	switch (func(req)) {
-	case 0:
+	func(req);
+
+	if (req->status == SAM_STAT_GOOD)
 		do_send_data_rsp(req);
-		return;
-	case -EIO:
-		/* Medium Error/Unrecovered Read Error */
-		rsp = create_sense_rsp(req, MEDIUM_ERROR, 0x11, 0x0);
-		break;
-	default:
-		rsp = create_sense_rsp(req, ILLEGAL_REQUEST, 0x24, 0x0);
+	else {
+		rsp = create_scsi_rsp(req);
+		iscsi_cmnd_init_write(rsp);
 	}
-	iscsi_cmnd_init_write(rsp);
 }
 
 /**
