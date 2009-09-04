@@ -195,7 +195,9 @@ depmod:
 		depmod -aq $(KVER); \
 	fi
 
-install: install-usr install-etc install-doc install-kernel depmod
+install-files: install-usr install-etc install-doc install-kernel
+
+install: install-files depmod
 
 install-kernel: kernel/iscsi_trgt.ko
 	@install -vD kernel/iscsi_trgt.ko \

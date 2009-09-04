@@ -21,7 +21,7 @@
 ##
 
 ## Information
-Summary: iSCSI Enterprise Target 
+Summary: iSCSI Enterprise Target
 Name: iscsitarget
 Version: 0.4.17
 Release: %{?revision: %{revision}}
@@ -91,7 +91,7 @@ iSCSI Enterprise Target kernel module
 ## Installation
 %install
 %{__rm} -rf %{buildroot}
-%{__make} install KERNELSRC=/lib/modules/%{kernel}/build DISTDIR=%{buildroot}
+%{__make} install-files KERNELSRC=/lib/modules/%{kernel}/build DISTDIR=%{buildroot}
 mkdir -p %{buildroot}/etc/rc.d
 mv %{buildroot}/etc/init.d %{buildroot}/etc/rc.d
 rm -rf %{buildroot}/usr/share/doc/iscsitarget
