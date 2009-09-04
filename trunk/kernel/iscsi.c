@@ -139,7 +139,7 @@ static void iscsi_scsi_dequeuecmnd(struct iscsi_cmnd *cmnd)
 /**
  * create a new command.
  *
- * iscsi_cmnd_create - 
+ * iscsi_cmnd_create -
  * @conn: ptr to connection (for i/o)
  *
  * @return    ptr to command or NULL
@@ -173,7 +173,7 @@ struct iscsi_cmnd *cmnd_alloc(struct iscsi_conn *conn, int req)
 /**
  * create a new command used as response.
  *
- * iscsi_cmnd_create_rsp_cmnd - 
+ * iscsi_cmnd_create_rsp_cmnd -
  * @cmnd: ptr to request command
  *
  * @return    ptr to response command or NULL
@@ -396,7 +396,7 @@ void send_data_rsp(struct iscsi_cmnd *req, void (*func)(struct iscsi_cmnd *))
  * Free a command.
  * Also frees the additional header.
  *
- * iscsi_cmnd_remove - 
+ * iscsi_cmnd_remove -
  * @cmnd: ptr to command
  */
 
@@ -1154,7 +1154,7 @@ static int target_reset(struct iscsi_cmnd *req, u32 lun, int all)
 	struct iscsi_session *session;
 	struct iscsi_conn *conn;
 	struct iscsi_cmnd *cmnd, *tmp;
-	struct iet_volume *volumes;
+	struct iet_volume *volume;
 
 	list_for_each_entry(session, &target->session_list, list) {
 		list_for_each_entry(conn, &session->conn_list, list) {
@@ -1170,10 +1170,15 @@ static int target_reset(struct iscsi_cmnd *req, u32 lun, int all)
 		}
 	}
 
-	list_for_each_entry(volumes, &target->volumes, list)
-		if (all || volumes->lun == lun)
+	list_for_each_entry(volume, &target->volumes, list) {
+		if (all || volume->lun == lun) {
 			/* force release */
-			volume_release(volumes, 0, 1);
+			volume_release(volume, 0, 1);
+			/* power-on, reset, or bus device reset occurred */
+			ua_establish_for_all_sessions(target, volume->lun,
+						      0x29, 0x0);
+		}
+	}
 
 	return 0;
 }
@@ -1206,7 +1211,7 @@ static inline char *tmf_desc(int fun)
 		"Task Reassign",
         };
 
-	if ((fun < ISCSI_FUNCTION_ABORT_TASK) || 
+	if ((fun < ISCSI_FUNCTION_ABORT_TASK) ||
 				(fun > ISCSI_FUNCTION_TASK_REASSIGN))
 		fun = 0;
 
@@ -1570,7 +1575,7 @@ void cmnd_tx_end(struct iscsi_cmnd *cmnd)
  * This functions reorders the commands.
  * Called from the read thread.
  *
- * iscsi_session_push_cmnd - 
+ * iscsi_session_push_cmnd -
  * @cmnd: ptr to command
  */
 
@@ -1739,6 +1744,8 @@ static void iscsi_exit(void)
 
 	iotype_exit();
 
+	ua_exit();
+
 	if (iscsi_cmnd_cache)
 		kmem_cache_destroy(iscsi_cmnd_cache);
 }
@@ -1762,6 +1769,10 @@ static int iscsi_init(void)
 
 	iscsi_cmnd_cache = KMEM_CACHE(iscsi_cmnd, 0);
 	if (!iscsi_cmnd_cache)
+		goto err;
+
+	err = ua_init();
+	if (err < 0)
 		goto err;
 
 	if ((err = tio_init()) < 0)

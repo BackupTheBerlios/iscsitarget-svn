@@ -442,11 +442,38 @@ static void build_reservation_conflict_response(struct iscsi_cmnd *cmnd)
 	cmnd->status = SAM_STAT_RESERVATION_CONFLICT;
 }
 
-static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
+static int disk_check_ua(struct iscsi_cmnd *cmnd)
 {
 	struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
+	struct ua_entry *ua;
 
-	req->opcode &= ISCSI_OPCODE_MASK;
+	if (cmnd->lun && ua_pending(cmnd->conn->session, cmnd->lun->lun)) {
+		switch(req->scb[0]){
+		case INQUIRY:
+		case REQUEST_SENSE:
+			break;
+		case REPORT_LUNS:
+			ua = ua_get_match(cmnd->conn->session,
+					  cmnd->lun->lun,
+					  /* reported luns data has changed */
+					  0x3f, 0x0e);
+			ua_free(ua);
+			break;
+		default:
+			ua = ua_get_first(cmnd->conn->session, cmnd->lun->lun);
+			iscsi_cmnd_set_sense(cmnd, UNIT_ATTENTION, ua->asc,
+					     ua->ascq);
+			ua_free(ua);
+			send_scsi_rsp(cmnd, build_generic_response);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int disk_check_reservation(struct iscsi_cmnd *cmnd)
+{
+	struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
 
 	if (is_volume_reserved(cmnd->lun,
 			       cmnd->conn->session->sid)) {
@@ -461,9 +488,24 @@ static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 			/* return reservation conflict for all others */
 			send_scsi_rsp(cmnd,
 				      build_reservation_conflict_response);
-			return 0;
+			return 1;
 		}
 	}
+
+	return 0;
+}
+
+static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
+{
+	struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
+
+	req->opcode &= ISCSI_OPCODE_MASK;
+
+	if (disk_check_ua(cmnd))
+		return 0;
+
+	if (disk_check_reservation(cmnd))
+		return 0;
 
 	switch (req->scb[0]) {
 	case INQUIRY:

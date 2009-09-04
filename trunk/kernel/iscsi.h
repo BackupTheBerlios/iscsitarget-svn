@@ -17,7 +17,7 @@
 #include "iscsi_hdr.h"
 #include "iet_u.h"
 
-#define IET_SENSE_BUF_SIZE      14
+#define IET_SENSE_BUF_SIZE      18
 
 struct iscsi_sess_param {
 	int initial_r2t;
@@ -115,6 +115,9 @@ struct iscsi_target {
 	struct list_head volumes;
 	struct list_head session_list;
 
+	/* Prevents races between add/del session and adding UAs */
+	spinlock_t session_list_lock;
+
 	struct network_thread_info nthread_info;
 	/* Points either to own list or global pool */
 	struct worker_thread_info * wthread_info;
@@ -175,6 +178,8 @@ enum lu_flags {
 #define IET_HASH_ORDER		8
 #define	cmnd_hashfn(itt)	hash_long((itt), IET_HASH_ORDER)
 
+#define UA_HASH_LEN 8
+
 struct iscsi_session {
 	struct list_head list;
 	struct iscsi_target *target;
@@ -194,6 +199,9 @@ struct iscsi_session {
 
 	spinlock_t cmnd_hash_lock;
 	struct list_head cmnd_hash[1 << IET_HASH_ORDER];
+
+	spinlock_t ua_hash_lock;
+	struct list_head ua_hash[UA_HASH_LEN];
 
 	u32 next_ttt;
 };
@@ -286,6 +294,14 @@ struct iscsi_cmnd {
 	struct iscsi_cmnd *req;
 
 	unsigned char sense_buf[IET_SENSE_BUF_SIZE];
+};
+
+struct ua_entry {
+	struct list_head entry;
+	struct iscsi_session *session; /* only used for debugging ATM */
+	u32 lun;
+	u8 asc;
+	u8 ascq;
 };
 
 #define ISCSI_OP_SCSI_REJECT	ISCSI_OP_VENDOR1_CMD
@@ -387,6 +403,21 @@ extern struct target_type disk_ops;
 extern int event_send(u32, u64, u32, u32, int);
 extern int event_init(void);
 extern void event_exit(void);
+
+/* ua.c */
+int ua_init(void);
+void ua_exit(void);
+struct ua_entry * ua_get_first(struct iscsi_session *, u32 lun);
+struct ua_entry * ua_get_match(struct iscsi_session *, u32 lun, u8 asc,
+			       u8 ascq);
+void ua_free(struct ua_entry *);
+int ua_pending(struct iscsi_session *, u32 lun);
+void ua_establish_for_session(struct iscsi_session *, u32 lun, u8 asc,
+			     u8 ascq);
+void ua_establish_for_other_sessions(struct iscsi_session *, u32 lun, u8 asc,
+				     u8 ascq);
+void ua_establish_for_all_sessions(struct iscsi_target *, u32 lun, u8 asc,
+				   u8 ascq);
 
 #define get_pgcnt(size, offset)	((((size) + ((offset) & ~PAGE_CACHE_MASK)) + PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT)
 

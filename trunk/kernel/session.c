@@ -23,6 +23,7 @@ iet_session_alloc(struct iscsi_target *target, struct session_info *info)
 {
 	int i;
 	struct iscsi_session *session;
+	struct iet_volume *vol;
 
 	dprintk(D_SETUP, "%p %u %#Lx\n", target, target->tid,
 		(unsigned long long) info->sid);
@@ -52,9 +53,19 @@ iet_session_alloc(struct iscsi_target *target, struct session_info *info)
 	for (i = 0; i < ARRAY_SIZE(session->cmnd_hash); i++)
 		INIT_LIST_HEAD(&session->cmnd_hash[i]);
 
+	spin_lock_init(&session->ua_hash_lock);
+	for (i = 0; i < ARRAY_SIZE(session->ua_hash); i++)
+		INIT_LIST_HEAD(&session->ua_hash[i]);
+
+	list_for_each_entry(vol, &target->volumes, list)
+		/* power-on, reset, or bus device reset occurred */
+		ua_establish_for_session(session, vol->lun, 0x29, 0x0);
+
 	session->next_ttt = 1;
 
+	spin_lock(&target->session_list_lock);
 	list_add(&session->list, &target->session_list);
+	spin_unlock(&target->session_list_lock);
 
 	return session;
 }
@@ -62,8 +73,13 @@ iet_session_alloc(struct iscsi_target *target, struct session_info *info)
 static int session_free(struct iscsi_session *session)
 {
 	int i;
+	struct ua_entry *ua, *tmp;
+	struct list_head *l;
+	struct iscsi_target *target = session->target;
 
 	dprintk(D_SETUP, "%#Lx\n", (unsigned long long) session->sid);
+
+	spin_lock(&target->session_list_lock);
 
 	assert(list_empty(&session->conn_list));
 
@@ -72,10 +88,20 @@ static int session_free(struct iscsi_session *session)
 			BUG();
 	}
 
+	for (i = 0; i < ARRAY_SIZE(session->ua_hash); i++) {
+		l = &session->ua_hash[i];
+		list_for_each_entry_safe(ua, tmp, l, entry) {
+			list_del_init(&ua->entry);
+			ua_free(ua);
+		}
+	}
+
 	list_del(&session->list);
 
 	kfree(session->initiator);
 	kfree(session);
+
+	spin_unlock(&target->session_list_lock);
 
 	return 0;
 }

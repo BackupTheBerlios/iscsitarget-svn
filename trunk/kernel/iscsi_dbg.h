@@ -10,6 +10,7 @@
 #define D_THREAD	(1UL << 6)
 #define D_TASK_MGT	(1UL << 7)
 #define D_IOMODE	(1UL << 8)
+#define D_UAC           (1UL << 9)
 
 #define D_DATA		(D_READ | D_WRITE)
 
@@ -23,6 +24,12 @@ extern unsigned long debug_enable_flags;
 						__LINE__, args);\
 	}							\
 } while (0)
+
+#define dprintk_ua(ua, sess, lun)					\
+	dprintk(D_UAC, "sess %llu, lun %u: %p %x %x\n",			\
+		(sess)->sid, lun, ua,					\
+		(ua) ? (ua)->asc : 0,					\
+		(ua) ? (ua)->ascq : 0)
 
 #define eprintk(fmt, args...) do {				\
 	printk(KERN_ERR PFX "%s(%d) " fmt, __FUNCTION__,	\

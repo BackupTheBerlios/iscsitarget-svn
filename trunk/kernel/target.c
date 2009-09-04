@@ -158,6 +158,7 @@ static int iscsi_target_create(struct target_info *info, u32 tid)
 	strncpy(target->name, name, sizeof(target->name) - 1);
 
 	init_MUTEX(&target->target_sem);
+	spin_lock_init(&target->session_list_lock);
 
 	INIT_LIST_HEAD(&target->session_list);
 	INIT_LIST_HEAD(&target->volumes);
