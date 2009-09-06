@@ -57,7 +57,7 @@ int ua_pending(struct iscsi_session *sess, u32 lun)
 	struct ua_entry *ua;
 
 	spin_lock(&sess->ua_hash_lock);
-	ua = ua_find_hash(sess, lun, 0, 0, false);
+	ua = ua_find_hash(sess, lun, 0, 0, 0);
 	spin_unlock(&sess->ua_hash_lock);
 
 	dprintk_ua(ua, sess, lun);
@@ -83,7 +83,7 @@ struct ua_entry * ua_get_first(struct iscsi_session *sess, u32 lun)
 	struct ua_entry *ua;
 
 	spin_lock(&sess->ua_hash_lock);
-	ua = __ua_get_hash(sess, lun, 0, 0, false);
+	ua = __ua_get_hash(sess, lun, 0, 0, 0);
 	spin_unlock(&sess->ua_hash_lock);
 
 	dprintk_ua(ua, sess, lun);
@@ -97,7 +97,7 @@ struct ua_entry * ua_get_match(struct iscsi_session *sess, u32 lun,
 	struct ua_entry *ua;
 
 	spin_lock(&sess->ua_hash_lock);
-	ua = __ua_get_hash(sess, lun, asc, ascq, true);
+	ua = __ua_get_hash(sess, lun, asc, ascq, 1);
 	spin_unlock(&sess->ua_hash_lock);
 
 	dprintk_ua(ua, sess, lun);
