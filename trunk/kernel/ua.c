@@ -69,9 +69,8 @@ int ua_pending(struct iscsi_session *sess, u32 lun)
 static struct ua_entry * __ua_get_hash(struct iscsi_session *sess, u32 lun,
 				       u8 asc, u8 ascq, int match)
 {
-	struct ua_entry *ua;
+	struct ua_entry *ua = ua_find_hash(sess, lun, asc, ascq, match);
 
-	ua = ua_find_hash(sess, lun, asc, ascq, match);
 	if (ua)
 		list_del_init(&ua->entry);
 
