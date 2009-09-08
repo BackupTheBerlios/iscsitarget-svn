@@ -482,8 +482,13 @@ static int disk_check_reservation(struct iscsi_cmnd *cmnd)
 		case RELEASE:
 		case REPORT_LUNS:
 		case REQUEST_SENSE:
+		case READ_CAPACITY:
 			/* allowed commands when reserved */
 			break;
+		case SERVICE_ACTION_IN:
+			if ((cmnd_hdr(cmnd)->scb[1] & 0x1F) == 0x10)
+				break;
+			/* fall through */
 		default:
 			/* return reservation conflict for all others */
 			send_scsi_rsp(cmnd,
