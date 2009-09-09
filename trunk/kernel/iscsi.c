@@ -1803,4 +1803,7 @@ MODULE_PARM_DESC(debug_enable_flags,
 module_init(iscsi_init);
 module_exit(iscsi_exit);
 
+MODULE_VERSION(IET_VERSION_STRING);
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("iSCSI Enterprise Target");
+MODULE_AUTHOR("IET development team <iscsitarget-devel@lists.sourceforge.net>");
