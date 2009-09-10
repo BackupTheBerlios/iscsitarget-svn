@@ -44,7 +44,7 @@ Release: %{?revision: %{revision}}
 License: GPL
 Group: System Environment/Daemons
 URL: http://sourceforge.net/projects/iscsitarget/
-Packager: Iscsitarget Developer [iscsitarget-devel@lists.sourceforge.net]
+Packager: IET development team <iscsitarget-devel@lists.sourceforge.net>
 
 ## Source files
 %if %svn
@@ -126,6 +126,8 @@ iSCSI Enterprise Target kernel module
 %if %svn
 %setup -q -T -c -n %{name}-%{version}
 svn export --force --non-interactive -q %{svn_url} .
+sed -i -e "s/\(#define IET_VERSION_STRING\).*/\1\t\"%{version}\"/" include/iet_u.h
+
 %else
 %setup -q -n %{name}-%{version}
 %endif
