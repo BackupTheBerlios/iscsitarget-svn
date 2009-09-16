@@ -29,24 +29,10 @@
 #include "iscsid.h"
 #include "ietadm.h"
 
-#define LISTEN_MAX		8
-#define INCOMING_MAX		32
-
-enum {
-	POLL_LISTEN,
-	POLL_IPC = POLL_LISTEN + LISTEN_MAX,
-	POLL_NL,
-	POLL_ISNS,
-	POLL_SCN_LISTEN,
-	POLL_SCN,
-	POLL_INCOMING,
-	POLL_MAX = POLL_INCOMING + INCOMING_MAX,
-};
-
 static char* server_address;
 uint16_t server_port = ISCSI_LISTEN_PORT;
 
-static struct pollfd poll_array[POLL_MAX];
+struct pollfd poll_array[POLL_MAX];
 static struct connection *incoming[INCOMING_MAX];
 static int incoming_cnt;
 int ctrl_fd, ipc_fd, nl_fd;
@@ -67,7 +53,7 @@ static struct option const long_options[] =
 	{0, 0, 0, 0},
 };
 
-/* This will be comfigurable by command line options */
+/* This will be configurable by command line options */
 extern struct config_operations plain_ops;
 struct config_operations *cops = &plain_ops;
 
@@ -119,7 +105,9 @@ static void create_listen_socket(struct pollfd *array)
 	hints.ai_flags = AI_PASSIVE;
 
 	if (getaddrinfo(server_address, servname, &hints, &res0)) {
-		log_error("unable to get address info (%s)!", strerror(errno));
+		log_error("unable to get address info (%s)!",
+			(errno == EAI_SYSTEM) ? strerror(errno) :
+						gai_strerror(errno));
 		exit(1);
 	}
 
@@ -136,10 +124,12 @@ static void create_listen_socket(struct pollfd *array)
 		if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)))
 			log_warning("unable to set SO_KEEPALIVE on server socket (%s)!",
 				    strerror(errno));
+
 		opt = 1;
 		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
 			log_warning("unable to set SO_REUSEADDR on server socket (%s)!",
 				    strerror(errno));
+
 		opt = 1;
 		if (res->ai_family == AF_INET6 &&
 		    setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt)))

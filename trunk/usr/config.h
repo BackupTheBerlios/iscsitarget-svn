@@ -15,7 +15,8 @@ struct config_operations {
 	int (*account_del) (u32, int, char *);
 	int (*account_query) (u32, int, char *, char *);
 	int (*account_list) (u32, int, u32 *, u32 *, char *, size_t);
-	int (*initiator_access) (u32, int);
+	int (*initiator_allow) (u32, int, char *);
+	int (*target_allow) (u32, struct sockaddr *);
 };
 
 extern struct config_operations *cops;

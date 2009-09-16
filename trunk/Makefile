@@ -216,9 +216,9 @@ install-etc: install-initd
 		install -vD -m 644 etc/initiators.allow \
 			$(DISTDIR)/etc/initiators.allow; \
 	fi
-	@if [ ! -e $(DISTDIR)/etc/initiators.deny ]; then \
-		install -vD -m 644 etc/initiators.deny \
-			$(DISTDIR)/etc/initiators.deny; \
+	@if [ ! -e $(DISTDIR)/etc/targets.allow ]; then \
+		install -vD -m 644 etc/targets.allow \
+			$(DISTDIR)/etc/targets.allow; \
 	fi
 
 install-initd:

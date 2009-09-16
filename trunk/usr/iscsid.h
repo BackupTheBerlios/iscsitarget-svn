@@ -8,6 +8,7 @@
 #define ISCSID_H
 
 #include <search.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 
 #include "types.h"
@@ -130,6 +131,20 @@ struct connection {
 
 #define INCOMING_BUFSIZE	8192
 
+#define LISTEN_MAX		8
+#define INCOMING_MAX		32
+
+enum {
+	POLL_LISTEN,
+	POLL_IPC = POLL_LISTEN + LISTEN_MAX,
+	POLL_NL,
+	POLL_ISNS,
+	POLL_SCN_LISTEN,
+	POLL_SCN,
+	POLL_INCOMING,
+	POLL_MAX = POLL_INCOMING + INCOMING_MAX,
+};
+
 struct target {
 	struct __qelem tlist;
 
@@ -195,7 +210,7 @@ extern int target_add(u32 *, char *);
 extern int target_del(u32);
 extern u32 target_find_by_name(const char *name);
 struct target * target_find_by_id(u32);
-extern void target_list_build(struct connection *, char *, char *);
+extern void target_list_build(struct connection *, char *);
 
 /* message.c */
 extern int ietadm_request_listen(void);
@@ -233,7 +248,7 @@ extern int param_index_by_name(char *name, struct iscsi_key *keys);
 extern int isns_init(char *addr, int isns_ac);
 extern int isns_handle(int is_timeout, int *timeout);
 extern int isns_scn_handle(int accept);
-extern int isns_scn_access(u32 tid, int fd, char *name);
+extern int isns_scn_allow(u32 tid, char *name);
 extern int isns_target_register(char *name);
 extern int isns_target_deregister(char *name);
 extern void isns_exit(void);

@@ -9,6 +9,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <netdb.h>
+#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -341,24 +342,48 @@ static int address_match(struct sockaddr *sa1, struct sockaddr *sa2)
 	return 0;
 }
 
-static int __initiator_match(int fd, char *str)
+static int initiator_match(char *initiator, char *p)
 {
-	struct sockaddr_storage from;
-	struct addrinfo hints, *res;
-	socklen_t len;
-	char *p, *q;
-	int err = 0;
+	int match = 0;
+	char pattern[strlen(p) + 3];
+	regex_t re;
 
-	len = sizeof(from);
-	if (getpeername(fd, (struct sockaddr *) &from, &len) < 0)
+	snprintf(pattern, sizeof(pattern), "^%s$", p);
+
+	if (regcomp(&re, pattern, REG_NOSUB))
 		return 0;
+
+	match = !regexec(&re, initiator, (size_t) 0, NULL, 0);
+
+	regfree(&re);
+
+	return match;
+}
+
+static int __match(struct sockaddr *sa, char *initiator, char *str)
+{
+	struct addrinfo hints, *res;
+	char *p, *q;
+	int match = 0;
 
 	while ((p = strsep(&str, ","))) {
 		while (isspace(*p))
 			p++;
 
+		if (!*p)
+			continue;
+
+		q = p + (strlen(p) - 1);
+
+		while (isspace(*q))
+			*(q--) = '\0';
+
 		if (!strcmp(p, "ALL"))
 			return 1;
+
+		if (initiator)
+			if (initiator_match(initiator, p))
+				return 1;
 
 		if (*p == '[') {
 			p++;
@@ -375,55 +400,56 @@ static int __initiator_match(int fd, char *str)
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_NUMERICHOST;
 
-		if (getaddrinfo(p, NULL, &hints, &res) < 0)
-			return 0;
+		if (getaddrinfo(p, NULL, &hints, &res) == 0) {
+			if (q)
+				match = netmask_match(res->ai_addr, sa, q);
+			else
+				match = address_match(res->ai_addr, sa);
 
-		if (q)
-			err = netmask_match(res->ai_addr,
-					    (struct sockaddr *) &from, q);
-		else
-			err = address_match(res->ai_addr,
-					    (struct sockaddr *) &from);
+			freeaddrinfo(res);
+		}
 
-		freeaddrinfo(res);
-
-		if (err)
+		if (match)
 			break;
 	}
 
-	return err;
+	return match;
 }
 
-static int initiator_match(u32 tid, int fd, char *filename)
+static int match(u32 tid, struct sockaddr *sa, char *initiator, char *filename)
 {
-	int err = 0;
+	int err = -EPERM;
 	FILE *fp;
-	char buf[BUFSIZE], *p;
+	char buf[BUFSIZE], *p, *q;
 
 	if (!(fp = fopen(filename, "r")))
-		return err;
+		return -ENOENT;
 
 	/*
 	 * Every time we are called, we read the file. So we don't need to
 	 * implement 'reload feature'. It's slow, however, it doesn't matter.
 	 */
 	while ((p = fgets(buf, sizeof(buf), fp))) {
+		q = &buf[strlen(buf) - 1];
+
+		if (*q != '\n')
+			continue;
+		else
+			*q = '\0';
+
+		q = p;
+
+		p = target_sep_string(&q);
+
 		if (!p || *p == '#')
 			continue;
 
-		p = &buf[strlen(buf) - 1];
-		if (*p != '\n')
-			continue;
-		*p = '\0';
-
-		if (!(p = strchr(buf, ' ')))
-			continue;
-		*(p++) = '\0';
-
-		if (target_find_by_name(buf) != tid && strcmp(buf, "ALL"))
+		if (target_find_by_name(p) != tid && strcmp(p, "ALL"))
 			continue;
 
-		err = __initiator_match(fd, p);
+		if (__match(sa, initiator, q))
+			err = 0;
+
 		break;
 	}
 
@@ -431,13 +457,38 @@ static int initiator_match(u32 tid, int fd, char *filename)
 	return err;
 }
 
-static int plain_initiator_access(u32 tid, int fd)
+static int plain_initiator_allow(u32 tid, int fd, char *initiator)
 {
-	if (initiator_match(tid, fd, "/etc/initiators.deny") &&
-	    !initiator_match(tid, fd, "/etc/initiators.allow"))
-		return -EPERM;
-	else
-		return 0;
+	struct sockaddr_storage ss;
+	socklen_t slen = sizeof(struct sockaddr_storage);
+	int allow, deny;
+
+	memset(&ss, 0, sizeof(ss));
+
+	getpeername(fd, (struct sockaddr *) &ss, &slen);
+
+	allow = match(tid, (struct sockaddr *) &ss, initiator,
+						"/etc/initiators.allow");
+	deny = match(tid, (struct sockaddr *) &ss, initiator,
+						"/etc/initiators.deny");
+
+	if (deny != -ENOENT) {
+		if (!deny && allow)
+			return 0;
+		else
+			return 1;
+	}
+
+	return (allow == -ENOENT) ? 1 : !allow;
+}
+
+static int plain_target_allow(u32 tid, struct sockaddr *sa)
+{
+	int allow;
+
+	allow = match(tid, sa, NULL, "/etc/targets.allow");
+
+	return (allow == -ENOENT) ? 1 : !allow;
 }
 
 /*
@@ -612,6 +663,11 @@ static int plain_init(char *params, char **isns, int *isns_ac)
 	char buf[BUFSIZE];
 	char *p, *q;
 
+	if ((config = fopen("/etc/initiators.deny", "r"))) {
+		fclose(config);
+		log_warning("%s is depreciated and will be obsoleted in the next release, please see README.initiators for more information", "/etc/initiators.deny");
+	}
+
 	if (!(config = fopen(params ? : CONFIG_FILE, "r")))
 		return -errno;
 
@@ -645,5 +701,6 @@ struct config_operations plain_ops = {
 	.account_del		= plain_account_del,
 	.account_query		= plain_account_query,
 	.account_list		= plain_account_list,
-	.initiator_access	= plain_initiator_access,
+	.initiator_allow	= plain_initiator_allow,
+	.target_allow		= plain_target_allow,
 };

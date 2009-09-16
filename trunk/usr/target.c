@@ -10,25 +10,147 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include "iscsid.h"
 
 struct __qelem targets_list = LIST_HEAD_INIT(targets_list);
 
-void target_list_build(struct connection *conn, char *addr, char *name)
+extern struct pollfd poll_array[POLL_MAX];
+
+static int is_addr_loopback(char *addr)
+{
+	struct in_addr ia;
+	struct in6_addr ia6;
+
+	if (inet_pton(AF_INET, addr, &ia) == 1)
+		return !strncmp(addr, "127.", 4);
+
+	if (inet_pton(AF_INET6, addr, &ia6) == 1)
+		return IN6_IS_ADDR_LOOPBACK(&ia6);
+
+	return 0;
+}
+
+static int is_addr_unspecified(char *addr)
+{
+	struct in_addr ia;
+	struct in6_addr ia6;
+
+	if (inet_pton(AF_INET, addr, &ia) == 1)
+		return (ia.s_addr == 0);
+
+	if (inet_pton(AF_INET6, addr, &ia6) == 1)
+		return IN6_IS_ADDR_UNSPECIFIED(&ia6);
+
+	return 0;
+}
+
+static void target_print_addr(struct connection *conn, char *addr, int family)
+{
+	char taddr[NI_MAXHOST + NI_MAXSERV + 5];
+
+	snprintf(taddr, sizeof(taddr),
+		(family == AF_INET) ? "%s:%d,1" : "[%s]:%d,1",
+							addr, server_port);
+
+	text_key_add(conn, "TargetAddress", taddr);
+}
+
+void target_list_build_ifaddrs(struct connection *conn, u32 tid, char *addr,
+								int family)
+{
+	struct ifaddrs *ifaddr, *ifa;
+	char if_addr[NI_MAXHOST];
+
+	getifaddrs(&ifaddr);
+
+	ifa = ifaddr;
+
+	while (ifa) {
+		int sa_family = ifa->ifa_addr->sa_family;
+
+		if (sa_family == family) {
+			if (getnameinfo(ifa->ifa_addr, (family == AF_INET) ?
+						sizeof(struct sockaddr_in) :
+						sizeof(struct sockaddr_in6),
+						if_addr, sizeof(if_addr),
+						NULL, 0, NI_NUMERICHOST))
+				continue;
+
+			if (strcmp(addr, if_addr) && !is_addr_loopback(if_addr)
+				&& cops->target_allow(tid, ifa->ifa_addr))
+				target_print_addr(conn, if_addr, family);
+		}
+
+		ifa = ifa->ifa_next;
+	}
+
+	freeifaddrs(ifaddr);
+}
+
+void target_list_build(struct connection *conn, char *name)
 {
 	struct target *target;
+	struct sockaddr_storage ss;
+	socklen_t slen = sizeof(struct sockaddr_storage);
+	char addr1[NI_MAXHOST], addr2[NI_MAXHOST];
+	int family, i;
+
+	if (getsockname(conn->fd, (struct sockaddr *) &ss, &slen))
+		return;
+
+	if (getnameinfo((struct sockaddr *) &ss, slen, addr1, sizeof(addr1),
+						NULL, 0, NI_NUMERICHOST))
+		return;
+
+	family = ss.ss_family;
 
 	list_for_each_entry(target, &targets_list, tlist) {
 		if (name && strcmp(target->name, name))
 			continue;
-		if (cops->initiator_access(target->tid, conn->fd) ||
-		    isns_scn_access(target->tid, conn->fd, conn->initiator))
+
+		if (!isns_scn_allow(target->tid, conn->initiator)
+			|| !cops->initiator_allow(target->tid, conn->fd,
+							conn->initiator)
+			|| !cops->target_allow(target->tid,
+						(struct sockaddr *) &ss))
 			continue;
 
 		text_key_add(conn, "TargetName", target->name);
-		text_key_add(conn, "TargetAddress", addr);
+
+		target_print_addr(conn, addr1, family);
+
+		for (i = 0; i < LISTEN_MAX && poll_array[i].fd; i++) {
+			slen = sizeof(struct sockaddr_storage);
+
+			if (getsockname(poll_array[i].fd,
+					(struct sockaddr *) &ss, &slen))
+				continue;
+
+			if (getnameinfo((struct sockaddr *) &ss, slen, addr2,
+				sizeof(addr2), NULL, 0, NI_NUMERICHOST))
+				continue;
+
+			if (ss.ss_family != family)
+				continue;
+
+			if (is_addr_unspecified(addr2))
+				target_list_build_ifaddrs(conn, target->tid,
+								addr1, family);
+			else if (strcmp(addr1, addr2)
+				&& !is_addr_loopback(addr2)
+				&& cops->target_allow(target->tid,
+						(struct sockaddr *) &ss))
+				target_print_addr(conn, addr2, family);
+		}
 	}
 }
 

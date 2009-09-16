@@ -391,6 +391,10 @@ static void login_start(struct connection *conn)
 	struct iscsi_login_req_hdr *req = (struct iscsi_login_req_hdr *)&conn->req.bhs;
 	struct iscsi_login_rsp_hdr *rsp = (struct iscsi_login_rsp_hdr *)&conn->rsp.bhs;
 	char *name, *alias, *session_type, *target_name;
+	struct sockaddr_storage ss;
+	socklen_t slen = sizeof(struct sockaddr_storage);
+
+	memset(&ss, 0, sizeof(ss));
 
 	conn->cid = be16_to_cpu(req->cid);
 	conn->sid.id64 = req->sid.id64;
@@ -416,6 +420,8 @@ static void login_start(struct connection *conn)
 	conn->auth_method = -1;
 	conn->session_type = SESSION_NORMAL;
 
+	getsockname(conn->fd, (struct sockaddr *) &ss, &slen);
+
 	if (session_type) {
 		if (!strcmp(session_type, "Discovery"))
 			conn->session_type = SESSION_DISCOVERY;
@@ -435,9 +441,10 @@ static void login_start(struct connection *conn)
 			return;
 		}
 
-		if (!(conn->tid = target_find_by_name(target_name)) ||
-		    cops->initiator_access(conn->tid, conn->fd) ||
-		    isns_scn_access(conn->tid, conn->fd, name)) {
+		if (!(conn->tid = target_find_by_name(target_name))
+			|| !cops->initiator_allow(conn->tid, conn->fd, name)
+			|| !cops->target_allow(conn->tid, (struct sockaddr *) &ss)
+			|| !isns_scn_allow(conn->tid, name)) {
 			rsp->status_class = ISCSI_STATUS_INITIATOR_ERR;
 			rsp->status_detail = ISCSI_STATUS_TGT_NOT_FOUND;
 			conn->state = STATE_EXIT;
@@ -720,34 +727,10 @@ static void text_scan_text(struct connection *conn)
 
 	while ((key = next_key(&data, &datasize, &value))) {
 		if (!strcmp(key, "SendTargets")) {
-			struct sockaddr_storage ss;
-			socklen_t slen, blen;
-			char *p, buf[NI_MAXHOST + 128];
-
 			if (value[0] == 0)
 				continue;
 
-			p = buf;
-			blen = sizeof(buf);
-
-			slen = sizeof(ss);
-			getsockname(conn->fd, (struct sockaddr *) &ss, &slen);
-			if (ss.ss_family == AF_INET6) {
-				*p++ = '[';
-				blen--;
-			}
-
-			slen = sizeof(ss);
-			getnameinfo((struct sockaddr *) &ss, slen, p, blen,
-				    NULL, 0, NI_NUMERICHOST);
-
-			p = buf + strlen(buf);
-
-			if (ss.ss_family == AF_INET6)
-				 *p++ = ']';
-
-			sprintf(p, ":%d,1", server_port);
-			target_list_build(conn, buf,
+			target_list_build(conn,
 					  strcmp(value, "All") ? value : NULL);
 		} else
 			text_key_add(conn, key, "NotUnderstood");

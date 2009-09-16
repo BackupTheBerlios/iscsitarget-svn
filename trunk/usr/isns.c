@@ -63,22 +63,22 @@ static char eid[ISCSI_NAME_LEN];
 static uint8_t ip[16]; /* IET supoprts only one portal */
 static struct sockaddr_storage ss;
 
-int isns_scn_access(uint32_t tid, int fd, char *name)
+int isns_scn_allow(uint32_t tid, char *name)
 {
 	struct isns_initiator *ini;
 	struct target *target = target_find_by_id(tid);
 
 	if (!use_isns || !use_isns_ac)
-		return 0;
+		return 1;
 
 	if (!target)
-		return -EPERM;
+		return 0;
 
 	list_for_each_entry(ini, &target->isns_head, ilist) {
 		if (!strcmp(ini->name, name))
-			return 0;
+			return 1;
 	}
-	return -EPERM;
+	return 0;
 }
 
 static int isns_get_ip(int fd)
