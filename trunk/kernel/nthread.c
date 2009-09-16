@@ -637,8 +637,12 @@ static void close_conn(struct iscsi_conn *conn)
 	event_send(target->tid, session->sid, conn->cid, E_CONN_CLOSE, 0);
 	conn_free(conn);
 
-	if (list_empty(&session->conn_list))
-		session_del(target, session->sid);
+	if (list_empty(&session->conn_list)) {
+		if (session->done)
+			complete(session->done);
+		else
+			session_del(target, session->sid);
+	}
 }
 
 static int istd(void *arg)

@@ -7,6 +7,7 @@
 #ifndef __ISCSI_H__
 #define __ISCSI_H__
 
+#include <linux/completion.h>
 #include <linux/pagemap.h>
 #include <linux/seq_file.h>
 #include <linux/mm.h>
@@ -123,6 +124,7 @@ struct iscsi_target {
 	struct worker_thread_info * wthread_info;
 
 	struct semaphore target_sem;
+	struct completion *done;
 };
 
 struct iscsi_queue {
@@ -183,7 +185,7 @@ enum lu_flags {
 struct iscsi_session {
 	struct list_head list;
 	struct iscsi_target *target;
-
+	struct completion *done;
 	char *initiator;
 	u64 sid;
 
@@ -326,6 +328,7 @@ extern void iscsi_cmnd_set_sense(struct iscsi_cmnd *, u8 sense_key, u8 asc,
 extern struct iscsi_conn *conn_lookup(struct iscsi_session *, u16);
 extern int conn_add(struct iscsi_session *, struct conn_info *);
 extern int conn_del(struct iscsi_session *, struct conn_info *);
+extern void conn_del_all(struct iscsi_session *);
 extern int conn_free(struct iscsi_conn *);
 extern void conn_close(struct iscsi_conn *);
 extern void conn_info_show(struct seq_file *, struct iscsi_session *);
@@ -353,6 +356,7 @@ extern void target_unlock(struct iscsi_target *);
 struct iscsi_target *target_lookup_by_id(u32);
 extern int target_add(struct target_info *);
 extern int target_del(u32 id);
+extern void target_del_all(void);
 extern struct seq_operations iet_seq_op;
 
 /* config.c */
@@ -365,6 +369,7 @@ extern struct file_operations session_seq_fops;
 extern struct iscsi_session *session_lookup(struct iscsi_target *, u64);
 extern int session_add(struct iscsi_target *, struct session_info *);
 extern int session_del(struct iscsi_target *, u64);
+extern void session_del_all(struct iscsi_target *);
 
 /* volume.c */
 extern struct file_operations volume_seq_fops;

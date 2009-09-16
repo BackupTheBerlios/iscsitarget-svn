@@ -307,8 +307,16 @@ done:
 	return err;
 }
 
+static int release(struct inode *i __attribute__((unused)),
+		   struct file *f __attribute__((unused)))
+{
+	target_del_all();
+	return 0;
+}
+
 struct file_operations ctr_fops = {
 	.owner		= THIS_MODULE,
 	.unlocked_ioctl	= ioctl,
 	.compat_ioctl	= ioctl,
+	.release	= release
 };

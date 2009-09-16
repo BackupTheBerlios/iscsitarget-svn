@@ -245,38 +245,59 @@ static void target_destroy(struct iscsi_target *target)
 	module_put(THIS_MODULE);
 }
 
-int target_del(u32 id)
+/* @locking: target_list_sem must be locked */
+int __target_del(struct iscsi_target *target)
 {
-	struct iscsi_target *target;
-	int err;
-
-	if ((err = down_interruptible(&target_list_sem)) < 0)
-		return err;
-
-	if (!(target = __target_lookup_by_id(id))) {
-		err = -ENOENT;
-		goto out;
-	}
-
 	target_lock(target, 0);
 
 	if (!list_empty(&target->session_list)) {
-		err = -EBUSY;
 		target_unlock(target);
-		goto out;
+		return -EBUSY;
 	}
 
 	list_del(&target->t_list);
 	nr_targets--;
 
 	target_unlock(target);
-	up(&target_list_sem);
-
 	target_destroy(target);
 	return 0;
-out:
+}
+
+int target_del(u32 id)
+{
+	struct iscsi_target *target;
+	int err = down_interruptible(&target_list_sem);
+	if (err < 0)
+		return err;
+
+	target = __target_lookup_by_id(id);
+	if (!target) {
+		err = -ENOENT;
+		goto out;
+	}
+
+	err = __target_del(target);
+ out:
 	up(&target_list_sem);
 	return err;
+}
+
+void target_del_all(void)
+{
+	DECLARE_COMPLETION_ONSTACK(done);
+	struct iscsi_target *target, *tmp;
+
+	down(&target_list_sem);
+
+	list_for_each_entry_safe(target, tmp, &target_list, t_list) {
+		init_completion(&done);
+		target->done = &done;
+		session_del_all(target);
+		wait_for_completion(&done);
+		__target_del(target);
+	}
+
+	up(&target_list_sem);
 }
 
 static void *iet_seq_start(struct seq_file *m, loff_t *pos)
