@@ -209,16 +209,22 @@ install-usr: usr/ietd usr/ietadm
 
 install-etc: install-initd
 	@if [ ! -e $(DISTDIR)/etc/ietd.conf ]; then \
-		install -vD -m 640 etc/ietd.conf \
-			$(DISTDIR)/etc/ietd.conf; \
+		if [ ! -e $(DISTDIR)/etc/iet/ietd.conf ]; then \
+			install -vD -m 640 etc/ietd.conf \
+				$(DISTDIR)/etc/iet/ietd.conf; \
+		fi \
 	fi
 	@if [ ! -e $(DISTDIR)/etc/initiators.allow ]; then \
-		install -vD -m 644 etc/initiators.allow \
-			$(DISTDIR)/etc/initiators.allow; \
+		if [ ! -e $(DISTDIR)/etc/iet/initiators.allow ]; then \
+			install -vD -m 644 etc/initiators.allow \
+				$(DISTDIR)/etc/iet/initiators.allow; \
+		fi \
 	fi
 	@if [ ! -e $(DISTDIR)/etc/targets.allow ]; then \
-		install -vD -m 644 etc/targets.allow \
-			$(DISTDIR)/etc/targets.allow; \
+		if [ ! -e $(DISTDIR)/etc/iet/targets.allow ]; then \
+			install -vD -m 644 etc/targets.allow \
+				$(DISTDIR)/etc/iet/targets.allow; \
+		fi \
 	fi
 
 install-initd:

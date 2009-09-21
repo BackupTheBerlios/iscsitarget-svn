@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
+#include <limits.h>
 #include <netdb.h>
 #include <regex.h>
 #include <stdio.h>
@@ -24,8 +25,11 @@
 #include "iscsid.h"
 
 #define BUFSIZE		4096
-#define CONFIG_FILE	"/etc/ietd.conf"
-#define ACCT_CONFIG_FILE	CONFIG_FILE
+#define CONFIG_FILE	"ietd.conf"
+#define CONFIG_DIR	"/etc/iet/"
+#define INI_ALLOW_FILE	"initiators.allow"
+#define INI_DENY_FILE	"initiators.deny"
+#define TGT_ALLOW_FILE	"targets.allow"
 
 /*
  * Account configuration code
@@ -84,43 +88,6 @@ static struct __qelem *account_list_get(u32 tid, int dir)
 			&discovery_users_in : &discovery_users_out;
 
 	return list;
-}
-
-static int plain_account_init(char *filename)
-{
-	FILE *fp;
-	char buf[BUFSIZE], *p, *q;
-	u32 tid;
-	int idx;
-
-	if (!(fp = fopen(filename, "r")))
-		return -EIO;
-
-	tid = 0;
-	while (fgets(buf, sizeof(buf), fp)) {
-		q = buf;
-		p = target_sep_string(&q);
-		if (!p || *p == '#')
-			continue;
-
-		if (!strcasecmp(p, "Target")) {
-			tid = 0;
-			if (!(p = target_sep_string(&q)))
-				continue;
-			tid = target_find_by_name(p);
-		} else if (!((idx = param_index_by_name(p, user_keys)) < 0)) {
-			char *name, *pass;
-			name = target_sep_string(&q);
-			pass = target_sep_string(&q);
-
-			if (cops->account_add(tid, idx, name, pass) < 0)
-				fprintf(stderr, "%s %s\n", name, pass);
-		}
-	}
-
-	fclose(fp);
-
-	return 0;
 }
 
 /* Return the first account if the length of name is zero */
@@ -420,10 +387,17 @@ static int match(u32 tid, struct sockaddr *sa, char *initiator, char *filename)
 {
 	int err = -EPERM;
 	FILE *fp;
-	char buf[BUFSIZE], *p, *q;
+	char buf[BUFSIZE], file1[PATH_MAX], file2[PATH_MAX], *p, *q;
 
-	if (!(fp = fopen(filename, "r")))
-		return -ENOENT;
+	strncpy(file1, CONFIG_DIR, PATH_MAX - 1);
+	strncat(file1, filename, PATH_MAX - (strlen(CONFIG_DIR) + 1));
+
+	strncpy(file2, "/etc/", PATH_MAX - 1);
+	strncat(file2, filename, PATH_MAX - 6);
+
+	if (!(fp = fopen(file1, "r")))
+		if (!(fp = fopen(file2, "r")))
+			return -ENOENT;
 
 	/*
 	 * Every time we are called, we read the file. So we don't need to
@@ -468,9 +442,9 @@ static int plain_initiator_allow(u32 tid, int fd, char *initiator)
 	getpeername(fd, (struct sockaddr *) &ss, &slen);
 
 	allow = match(tid, (struct sockaddr *) &ss, initiator,
-						"/etc/initiators.allow");
+						INI_ALLOW_FILE);
 	deny = match(tid, (struct sockaddr *) &ss, initiator,
-						"/etc/initiators.deny");
+						INI_DENY_FILE);
 
 	if (deny != -ENOENT) {
 		if (!deny && allow)
@@ -486,7 +460,7 @@ static int plain_target_allow(u32 tid, struct sockaddr *sa)
 {
 	int allow;
 
-	allow = match(tid, sa, NULL, "/etc/targets.allow");
+	allow = match(tid, sa, NULL, TGT_ALLOW_FILE);
 
 	return (allow == -ENOENT) ? 1 : !allow;
 }
@@ -587,19 +561,37 @@ static int iscsi_param_partial_set(u32 tid, u64 sid, int type, int key, u32 val)
 	return __plain_param_set(tid, sid, type, 1 << key, param, 0);
 }
 
-static int plain_main_init(char *filename)
+static void plain_portal_init(FILE *fp, char **isns, int *isns_ac)
 {
-	FILE *config;
+	char buf[BUFSIZE];
+	char *p, *q;
+
+	while (fgets(buf, BUFSIZE, fp)) {
+		q = buf;
+		p = target_sep_string(&q);
+		if (!p || *p == '#')
+			continue;
+		if (!strcasecmp(p, "iSNSServer")) {
+			*isns = strdup(target_sep_string(&q));
+		} else if (!strcasecmp(p, "iSNSAccessControl")) {
+			char *str = target_sep_string(&q);
+			if (!strcasecmp(str, "Yes"))
+				*isns_ac = 1;
+		}
+	}
+
+	return;
+}
+
+static void plain_target_init(FILE *fp)
+{
 	char buf[BUFSIZE];
 	char *p, *q;
 	int idx;
 	u32 tid, val;
 
-	if (!(config = fopen(filename, "r")))
-		return -errno;
-
 	tid = 0;
-	while (fgets(buf, BUFSIZE, config)) {
+	while (fgets(buf, BUFSIZE, fp)) {
 		q = buf;
 		p = target_sep_string(&q);
 		if (!p || *p == '#')
@@ -632,66 +624,93 @@ static int plain_main_init(char *filename)
 		}
 	}
 
-	fclose(config);
-	return 0;
+	return;
 }
 
-static int plain_default_load(char *params)
+static void plain_account_init(FILE *fp)
 {
-	int i, err;
+	char buf[BUFSIZE], *p, *q;
+	u32 tid;
+	int idx;
+
+	tid = 0;
+	while (fgets(buf, sizeof(buf), fp)) {
+		q = buf;
+		p = target_sep_string(&q);
+		if (!p || *p == '#')
+			continue;
+
+		if (!strcasecmp(p, "Target")) {
+			tid = 0;
+			if (!(p = target_sep_string(&q)))
+				continue;
+			tid = target_find_by_name(p);
+		} else if (!((idx = param_index_by_name(p, user_keys)) < 0)) {
+			char *name, *pass;
+			name = target_sep_string(&q);
+			pass = target_sep_string(&q);
+
+			if (plain_account_add(tid, idx, name, pass) < 0)
+				fprintf(stderr, "%s %s\n", name, pass);
+		}
+	}
+
+	return;
+}
+
+static void plain_init(char *params, char **isns, int *isns_ac)
+{
+	FILE *fp;
+	struct stat st;
+	char file1[PATH_MAX], file2[PATH_MAX];
+	int i;
 
 	for (i = 0; i < 1 << HASH_ORDER; i++) {
 		INIT_LIST_HEAD(&trgt_acct_in[i]);
 		INIT_LIST_HEAD(&trgt_acct_out[i]);
 	}
 
-	/* First, we must finish the main configuration. */
-	if ((err = plain_main_init(params ? params : CONFIG_FILE)))
-		return err;
+	strncpy(file1, CONFIG_DIR, PATH_MAX - 1);
+	strncat(file1, INI_DENY_FILE, PATH_MAX - (strlen(CONFIG_DIR) + 1));
 
-	if ((err = plain_account_init(ACCT_CONFIG_FILE)) < 0)
-		return err;
+	strncpy(file2, "/etc/", PATH_MAX - 1);
+	strncat(file2, INI_DENY_FILE, PATH_MAX - 6);
 
-	/* TODO: error handling */
+	if (!stat(file1, &st) || !stat(file2, &st))
+		log_warning("%s is depreciated and will be obsoleted in the next release, please see README.initiators for more information", INI_DENY_FILE);
 
-	return err;
-}
+	strncpy(file1, CONFIG_DIR, PATH_MAX - 1);
+	strncat(file1, CONFIG_FILE, PATH_MAX - (strlen(CONFIG_DIR) + 1));
 
-static int plain_init(char *params, char **isns, int *isns_ac)
-{
-	FILE *config;
-	char buf[BUFSIZE];
-	char *p, *q;
+	strncpy(file2, "/etc/", PATH_MAX - 1);
+	strncat(file2, CONFIG_FILE, PATH_MAX - 6);
 
-	if ((config = fopen("/etc/initiators.deny", "r"))) {
-		fclose(config);
-		log_warning("%s is depreciated and will be obsoleted in the next release, please see README.initiators for more information", "/etc/initiators.deny");
-	}
-
-	if (!(config = fopen(params ? : CONFIG_FILE, "r")))
-		return -errno;
-
-	while (fgets(buf, BUFSIZE, config)) {
-		q = buf;
-		p = target_sep_string(&q);
-		if (!p || *p == '#')
-			continue;
-		if (!strcasecmp(p, "iSNSServer")) {
-			*isns = strdup(target_sep_string(&q));
-		} else if (!strcasecmp(p, "iSNSAccessControl")) {
-			char *str = target_sep_string(&q);
-			if (!strcasecmp(str, "Yes"))
-				*isns_ac = 1;
+	if (!(fp = fopen(params ? params : file1, "r"))) {
+		if ((fp = fopen(file2, "r")))
+			log_warning("%s's location is depreciated and will be moved in the next release to %s", file2, file1);
+		else {
+			log_warning("%s not found, configure through ietadm", CONFIG_FILE);
+			return;
 		}
 	}
 
-	fclose(config);
-	return 0;
+	plain_portal_init(fp, isns, isns_ac);
+
+	rewind(fp);
+
+	plain_target_init(fp);
+
+	rewind(fp);
+
+	plain_account_init(fp);
+
+	fclose(fp);
+
+	return;
 }
 
 struct config_operations plain_ops = {
 	.init			= plain_init,
-	.default_load		= plain_default_load,
 	.target_add		= plain_target_create,
 	.target_del		= plain_target_destroy,
 	.lunit_add		= plain_lunit_create,

@@ -102,14 +102,21 @@ void target_list_build(struct connection *conn, char *name)
 	struct sockaddr_storage ss;
 	socklen_t slen = sizeof(struct sockaddr_storage);
 	char addr1[NI_MAXHOST], addr2[NI_MAXHOST];
-	int family, i;
+	int ret, family, i;
 
-	if (getsockname(conn->fd, (struct sockaddr *) &ss, &slen))
+	if (getsockname(conn->fd, (struct sockaddr *) &ss, &slen)) {
+		log_error("getsockname failed: %m");
 		return;
+	}
 
-	if (getnameinfo((struct sockaddr *) &ss, slen, addr1, sizeof(addr1),
-						NULL, 0, NI_NUMERICHOST))
+	ret = getnameinfo((struct sockaddr *) &ss, slen, addr1,
+				sizeof(addr1), NULL, 0, NI_NUMERICHOST);
+	if (ret) {
+		log_error("getnameinfo failed: %s",
+			(ret == EAI_SYSTEM) ? strerror(errno) :
+							gai_strerror(ret));
 		return;
+	}
 
 	family = ss.ss_family;
 
