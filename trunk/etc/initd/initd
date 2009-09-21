@@ -4,12 +4,17 @@
 #
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
+OPTIONS=""
+
+if [ -f /etc/sysconfig/iscsi-target ]; then
+	. /etc/sysconfig/iscsi-target
+fi
 
 start_server()
 {
 	modprobe -q crc32c
 	modprobe iscsi_trgt
-	/usr/sbin/ietd
+	/usr/sbin/ietd $OPTIONS
 }
 
 stop_server()

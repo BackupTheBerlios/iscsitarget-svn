@@ -6,6 +6,9 @@
 # pidfile: /var/run/ietd.pid
 # config:  /etc/ietd.conf
 
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+OPTIONS=""
+
 # Source function library.
 if [ -f /etc/init.d/functions ] ; then
   . /etc/init.d/functions
@@ -15,29 +18,35 @@ else
   exit 0
 fi
 
-PATH=/sbin:/bin:/usr/sbin:/usr/bin
+if [ -f /etc/sysconfig/iscsi-target ]; then
+  . /etc/sysconfig/iscsi-target
+fi
 
 RETVAL=0
 
 start()
 {
-	echo -n "Starting iSCSI target service: "
+	echo -n "Starting iSCSI Target: "
 	modprobe -q crc32c
 	modprobe iscsi_trgt
-	daemon /usr/sbin/ietd
+	daemon /usr/sbin/ietd $OPTIONS
 	RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		echo_success
+	else
+		echo_failure
+	fi
 	echo
 	return $RETVAL
 }
 
 stop()
 {
-	echo -n "Stopping iSCSI target service: "
-	ietadm --op delete >/dev/null 2>/dev/null
-	killall ietd 2> /dev/null
-	modprobe -r iscsi_trgt 2>/dev/null
+	echo -n "Stopping iSCSI Target: "
+	ietadm --op delete
+	killall ietd
+	modprobe -r iscsi_trgt
 	RETVAL=$?
-	modprobe -r crc32c 2>/dev/null
 	if [ $RETVAL -eq 0 ]; then
 		echo_success
 	else
@@ -49,8 +58,9 @@ stop()
 
 restart()
 {
-        stop
-        start
+	stop
+	sleep 1
+	start
 }
 
 condrestart()
@@ -65,10 +75,10 @@ status()
 {
 	PID=`pidofproc ietd`
 	if [ ! $PID ]; then
-		echo "iSCSI target stopped"
+		echo "iSCSI Target stopped"
 		exit 1
 	else
-		echo "ietd (pid $PID) is running..."
+		echo "iSCSI Target (pid $PID) is running..."
 	fi
 }
 
@@ -80,7 +90,7 @@ case "$1" in
         stop
         ;;
   restart)
-        restart
+	restart
         ;;
   condrestart)
         condrestart
@@ -89,7 +99,7 @@ case "$1" in
         status
         ;;
   *)
-        echo $"Usage: $0 {start|stop|restart|status}"
+        echo $"Usage: $0 {start|stop|restart|condrestart|status}"
         exit 1
 esac
 
