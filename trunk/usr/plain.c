@@ -387,17 +387,18 @@ static int match(u32 tid, struct sockaddr *sa, char *initiator, char *filename)
 {
 	int err = -EPERM;
 	FILE *fp;
-	char buf[BUFSIZE], file1[PATH_MAX], file2[PATH_MAX], *p, *q;
+	char buf[BUFSIZE], fname[PATH_MAX], *p, *q;
 
-	strncpy(file1, CONFIG_DIR, PATH_MAX - 1);
-	strncat(file1, filename, PATH_MAX - (strlen(CONFIG_DIR) + 1));
+	snprintf(fname, sizeof(fname), "%s%s", CONFIG_DIR, filename);
+	if (!(fp = fopen(fname, "r"))) {
+		if (errno != ENOENT)
+			return -errno;
 
-	strncpy(file2, "/etc/", PATH_MAX - 1);
-	strncat(file2, filename, PATH_MAX - 6);
-
-	if (!(fp = fopen(file1, "r")))
-		if (!(fp = fopen(file2, "r")))
-			return -ENOENT;
+		snprintf(fname, sizeof(fname), "%s%s", "/etc/", filename);
+		fp = fopen(fname, "r");
+		if (!fp)
+			return -errno;
+	}
 
 	/*
 	 * Every time we are called, we read the file. So we don't need to
@@ -670,20 +671,14 @@ static void plain_init(char *params, char **isns, int *isns_ac)
 		INIT_LIST_HEAD(&trgt_acct_out[i]);
 	}
 
-	strncpy(file1, CONFIG_DIR, PATH_MAX - 1);
-	strncat(file1, INI_DENY_FILE, PATH_MAX - (strlen(CONFIG_DIR) + 1));
-
-	strncpy(file2, "/etc/", PATH_MAX - 1);
-	strncat(file2, INI_DENY_FILE, PATH_MAX - 6);
+	snprintf(file1, sizeof(file1), "%s%s", CONFIG_DIR, INI_DENY_FILE);
+	snprintf(file2, sizeof(file2), "/etc/%s", INI_DENY_FILE);
 
 	if (!stat(file1, &st) || !stat(file2, &st))
 		log_warning("%s is depreciated and will be obsoleted in the next release, please see README.initiators for more information", INI_DENY_FILE);
 
-	strncpy(file1, CONFIG_DIR, PATH_MAX - 1);
-	strncat(file1, CONFIG_FILE, PATH_MAX - (strlen(CONFIG_DIR) + 1));
-
-	strncpy(file2, "/etc/", PATH_MAX - 1);
-	strncat(file2, CONFIG_FILE, PATH_MAX - 6);
+	snprintf(file1, sizeof(file1), "%s%s", CONFIG_DIR, CONFIG_FILE);
+	snprintf(file2, sizeof(file2), "/etc/%s", CONFIG_FILE);
 
 	if (!(fp = fopen(params ? params : file1, "r"))) {
 		if ((fp = fopen(file2, "r")))
