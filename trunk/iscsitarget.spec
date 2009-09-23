@@ -237,10 +237,10 @@ modprobe -r -q --set-version %{kernel} iscsi_trgt
 %{_sbindir}/*
 %{_mandir}/man?/*
 %{_sysconfdir}/rc.d/init.d/*
-%config(noreplace) %{_sysconfdir}/ietd.conf
-%config(noreplace) %{_sysconfdir}/initiators.allow
-%config(noreplace) %{_sysconfdir}/initiators.deny
-%doc ChangeLog COPYING README README.vmware
+%config(noreplace) %{_sysconfdir}/iet/ietd.conf
+%config(noreplace) %{_sysconfdir}/iet/initiators.allow
+%config(noreplace) %{_sysconfdir}/iet/targets.allow
+%doc ChangeLog COPYING README README.vmware README.initiators
 %endif
 
 
@@ -259,6 +259,9 @@ modprobe -r -q --set-version %{kernel} iscsi_trgt
 
 
 %changelog
+* Wed Sep 22 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-226
+- Updated file catalog for new config directory
+
 * Wed Sep 09 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-226
 - Added ability to build directly from subversion repo
 - Added ability to build dkms kernel module
