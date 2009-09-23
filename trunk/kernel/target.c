@@ -297,6 +297,8 @@ void target_del_all(void)
 		__target_del(target);
 	}
 
+	next_target_id = 0;
+
 	up(&target_list_sem);
 }
 
