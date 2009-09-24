@@ -557,6 +557,10 @@ static int iscsi_param_partial_set(u32 tid, u64 sid, int type, int key, u32 val)
 	else
 		param = target_param;
 
+	memset(param, 0x0, (type == key_session) ?
+	       sizeof(session_param) :
+	       sizeof(target_param));
+
 	param[key].val = val;
 
 	return __plain_param_set(tid, sid, type, 1 << key, param, 0);
