@@ -9,7 +9,7 @@
 %define revision 1
 
 ## Build Options
-# Build weak module (KABI tracking) requires /sbin/weak-modules
+# Build weak module (KABI tracking) requires weak-modules tool
 %define weak 0
 
 # Build DKMS kernel module
@@ -19,17 +19,23 @@
 %define svn 0
 
 ## Package Definitions
-#
+# Basic regex filters for unwanted dependencies (used for weak modules)
+#define pro_filter ""
+%define req_filter "^ksym(\\(fsync_bdev\\|sync_page_range\\))"
+
+# Subversion build information
 %if %svn
 %define svn_url http://svn.berlios.de/svnroot/repos/iscsitarget/trunk
 %define iet_version %(svn info --non-interactive %{svn_url} | awk '{if ($1 == "Revision:") {print "svn_r"$2}}')
 %endif
 
-# Basic regex filters for unwanted dependencies (used for weak modules)
-#define pro_filter ""
-%define req_filter "^ksym(\\(fsync_bdev\\|sync_page_range\\))"
-
 ## Platform Definitions
+# Determine distribution
+%define is_suse %(test -e /etc/SuSE-release && echo 1 || echo 0)
+%define is_fedora %(test -e /etc/fedora-release && echo 1 || echo 0)
+%define is_redhat %(test -e /etc/redhat-release && echo 1 || echo 0)
+%define is_mandrake %(test -e /etc/mandrake-release && echo 1 || echo 0)
+
 # Define kernel version information
 %{!?kernel:	%define kernel %(uname -r)}
 
@@ -38,12 +44,19 @@
 %define krel	%(echo %{kver} | sed -e 's/-/_/g')
 %define kminor	%(echo %{kernel} | sed -e 's/.*\\([0-9][0-9]*\\)-.*/\\1/')
 
-# Define user
+# Set location of weak-modules tool
+%if %is_suse
+%define weak_modules /usr/lib/module-init-tools/weak-modules
+%else
+%define weak_modules /sbin/weak-modules
+%endif
+
+# Define build user
 %define user	%(whoami)
 
 
 ##
-## Main Package
+## Userland Package
 ##
 
 ## Information
@@ -82,7 +95,7 @@ iSCSI Enterprise Target
 
 
 ##
-## Kernel Module
+## Kernel Module Package
 ##
 %if %dkms
 %ifarch noarch
@@ -115,8 +128,8 @@ Release: %{release}_%{krel}
 ## Install Requirements
 %if %weak
 %global _use_internal_dependency_generator 0
-Requires(post): /sbin/weak-modules
-Requires(postun): /sbin/weak-modules
+Requires(post): %{weak_modules}
+Requires(postun): %{weak_modules}
 %else
 Requires: %{ktype} = %{kver}
 %endif
@@ -260,7 +273,9 @@ fi
 %post -n kmod-%{name}
 /sbin/depmod %{kernel} -A
 %if %weak
-echo iscsi_trgt.ko | /sbin/weak-modules --add-modules
+if [ -x %{weak_modules} ]; then
+	echo /lib/modules/%{kernel}/extra/iscsi/iscsi_trgt.ko | %{weak_modules} --add-modules
+fi
 %endif
 %endif
 
@@ -276,7 +291,9 @@ echo iscsi_trgt.ko | /sbin/weak-modules --add-modules
 modprobe -r -q --set-version %{kernel} iscsi_trgt
 /sbin/depmod %{kernel} -A
 %if %weak
-echo iscsi_trgt.ko | /sbin/weak-modules --remove-modules
+if [ -x %{weak_modules} ]; then
+	echo /lib/modules/%{kernel}/extra/iscsi/iscsi_trgt.ko | %{weak_modules} --remove-modules
+fi
 %endif
 %endif
 
@@ -305,11 +322,15 @@ echo iscsi_trgt.ko | /sbin/weak-modules --remove-modules
 %else
 %files -n kmod-%{name}
 %defattr(-, root, root)
-/lib/modules/%{kernel}/kernel/iscsi/iscsi_trgt.ko
+/lib/modules/%{kernel}
 %endif
 
 
 %changelog
+* Wed Sep 25 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-244
+- SuSE puts weak-modules under /usr/lib/module-init-tools
+- Kernel module now located in /lib/modules/<kver>/extra
+
 * Wed Sep 25 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-242
 - Added ability to build weak modules for platforms that support them
 - Cleaned up logic a little
