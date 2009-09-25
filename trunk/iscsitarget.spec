@@ -9,6 +9,9 @@
 %define revision 1
 
 ## Build Options
+# Build weak module (KABI tracking) requires /sbin/weak-modules
+%define weak 0
+
 # Build DKMS kernel module
 %define dkms 0
 
@@ -22,6 +25,10 @@
 %define iet_version %(svn info --non-interactive %{svn_url} | awk '{if ($1 == "Revision:") {print "svn_r"$2}}')
 %endif
 
+# Basic regex filters for unwanted dependencies (used for weak modules)
+#define pro_filter ""
+%define req_filter "^ksym(\\(fsync_bdev\\|sync_page_range\\))"
+
 ## Platform Definitions
 # Define kernel version information
 %{!?kernel:	%define kernel %(uname -r)}
@@ -31,6 +38,9 @@
 %define krel	%(echo %{kver} | sed -e 's/-/_/g')
 %define kminor	%(echo %{kernel} | sed -e 's/.*\\([0-9][0-9]*\\)-.*/\\1/')
 
+# Define user
+%define user	%(whoami)
+
 
 ##
 ## Main Package
@@ -39,23 +49,22 @@
 ## Information
 Summary: iSCSI Enterprise Target
 Name: iscsitarget
-Version: %{?iet_version: %{iet_version}}
-Release: %{?revision: %{revision}}
+Version: %{iet_version}
+Release: %{?revision: %{revision}}%{!?revision: 1}
 License: GPL
 Group: System Environment/Daemons
 URL: http://sourceforge.net/projects/iscsitarget/
 Packager: IET development team <iscsitarget-devel@lists.sourceforge.net>
 
 ## Source files
-%if %svn
-%else
+%if !%svn
 Source0: %{name}-%{version}.tar.gz
 %endif
 
 ## Patches
 
 ## Install Requirements
-Requires: kmod-%{name} = %{version}
+Requires: kmod-%{name} = %{?epoch:%{epoch}:}%{version}-%{release}
 
 ## Build Requirements
 BuildRequires: kernel >= 2.6
@@ -65,7 +74,7 @@ BuildRequires: subversion
 %endif
 
 ## Build Definitions
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-%{user}
 
 ## Description
 %description
@@ -85,10 +94,11 @@ Group: System Environment/Kernel
 Release: %{release}_dkms
 
 ## Install Requirements
+Requires: %{ktype}-devel, gcc, make, patch, binutils, openssl-devel
 Requires: dkms >= 2
 
 ## Install Provides
-Provides: kmod-%{name}
+Provides: kmod-%{name} = %{?epoch:%{epoch}:}%{version}-%{release}
 
 ## Description
 %description -n kmod-%{name}
@@ -103,10 +113,19 @@ Group: System Environment/Kernel
 Release: %{release}_%{krel}
 
 ## Install Requirements
+%if %weak
+%global _use_internal_dependency_generator 0
+Requires(post): /sbin/weak-modules
+Requires(postun): /sbin/weak-modules
+%else
 Requires: %{ktype} = %{kver}
+%endif
+Requires(post): /sbin/depmod
+Requires(postun): /sbin/depmod
 
 ## Install Provides
-Provides: kmod-%{name}
+Provides: kernel-modules = %{kver}
+Provides: kmod-%{name} = %{?epoch:%{epoch}:}%{version}-%{release}
 
 ## Description
 %description -n kmod-%{name}
@@ -124,10 +143,11 @@ iSCSI Enterprise Target kernel module
 
 ## Setup
 %if %svn
-%setup -q -T -c -n %{name}-%{version}
+%setup -q -D -T -c -n %{name}-%{version}
+if [ ! -f include/iet_u.h ]; then
 svn export --force --non-interactive -q %{svn_url} .
 sed -i -e "s/\(#define IET_VERSION_STRING\).*/\1\t\"%{version}\"/" include/iet_u.h
-
+fi
 %else
 %setup -q -n %{name}-%{version}
 %endif
@@ -138,6 +158,7 @@ sed -i -e "s/\(#define IET_VERSION_STRING\).*/\1\t\"%{version}\"/" include/iet_u
 
 ## Build
 %build
+%{__make} distclean
 %ifnarch noarch
 %if %dkms
 %{__make} usr
@@ -150,31 +171,55 @@ sed -i -e "s/\(#define IET_VERSION_STRING\).*/\1\t\"%{version}\"/" include/iet_u
 ## Installation
 %install
 %{__rm} -rf %{buildroot}
+
 %ifnarch noarch
 %if %dkms
 %{__make} install-usr install-doc install-etc KERNELSRC=/lib/modules/%{kernel}/build DISTDIR=%{buildroot}
 %else
 %{__make} install-files KERNELSRC=/lib/modules/%{kernel}/build DISTDIR=%{buildroot}
+rm -f %{buildroot}/lib/modules/%{kernel}/modules.*
 %endif
 mkdir -p %{buildroot}/etc/rc.d
 mv %{buildroot}/etc/init.d %{buildroot}/etc/rc.d
 rm -rf %{buildroot}/usr/share/doc/iscsitarget
-%endif
-%if %dkms
-%ifarch noarch
-%{__make} distclean
+%elseif %dkms
 mkdir -p %{buildroot}/usr/src/%{name}-%{version}
 cp -r COPYING include kernel patches %{buildroot}/usr/src/%{name}-%{version}
 sed -e "s/PACKAGE_VERSION=.*/PACKAGE_VERSION=\"%{version}\"/" dkms.conf >%{buildroot}/usr/src/%{name}-%{version}/dkms.conf
 %endif
-%else
-rm -f %{buildroot}/lib/modules/%{kernel}/modules.*
+
+# Ugly hack to filter out unwanted dependencies
+%if %weak
+%if %{?pro_filter:1}%{!?pro_filter:0}
+%define iet_provides %{_tmppath}/iet_provides-%{user}
+%{__cat} << EOF > %{iet_provides}
+%{__find_provides} "\$@" | %{__grep} -v %{pro_filter}
+exit 0
+EOF
+%{__chmod} 755 %{iet_provides}
+%define __find_provides %{iet_provides}
+%endif
+%if %{?req_filter:1}%{!?req_filter:0}
+%define iet_requires %{_tmppath}/iet_requires-%{user}
+%{__cat} << EOF > %{iet_requires}
+%{__find_requires} "\$@" | %{__grep} -v %{req_filter}
+exit 0
+EOF
+%{__chmod} 755 %{iet_requires}
+%define __find_requires %{iet_requires}
+%endif
 %endif
 
 
 ## Cleaning
 %clean
 %{__rm} -rf %{buildroot}
+%if %{?iet_provides:1}%{!?iet_provides:0}
+rm -f %{iet_provides}
+%endif
+%if %{?iet_requires:1}%{!?iet_requires:0}
+rm -f %{iet_requires}
+%endif
 
 
 ## Post-Install Script
@@ -214,6 +259,9 @@ fi
 %else
 %post -n kmod-%{name}
 /sbin/depmod %{kernel} -A
+%if %weak
+echo iscsi_trgt.ko | /sbin/weak-modules --add-modules
+%endif
 %endif
 
 
@@ -227,6 +275,9 @@ fi
 %preun -n kmod-%{name}
 modprobe -r -q --set-version %{kernel} iscsi_trgt
 /sbin/depmod %{kernel} -A
+%if %weak
+echo iscsi_trgt.ko | /sbin/weak-modules --remove-modules
+%endif
 %endif
 
 
@@ -259,55 +310,61 @@ modprobe -r -q --set-version %{kernel} iscsi_trgt
 
 
 %changelog
-* Wed Sep 22 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-226
+* Wed Sep 25 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-242
+- Added ability to build weak modules for platforms that support them
+- Cleaned up logic a little
+- Made safe for multi-user builds
+- Redacted old spec file maintainer's email address
+
+* Wed Sep 22 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-236
 - Updated file catalog for new config directory
 
 * Wed Sep 09 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-226
 - Added ability to build directly from subversion repo
 - Added ability to build dkms kernel module
 
-* Mon Nov 10 2008 Ross Walker <rswwalker@gmail.com> - 0.4.17-177
+* Mon Nov 10 2008 Ross Walker <rswwalker at gmail dot com> - 0.4.17-177
 - Changed kernel-module naming to kmod
 - Updated versioning
 
-* Fri Feb 16 2007 Ross Walker <rswwalker@gmail.com> - 0.4.14-96
+* Fri Feb 16 2007 Ross Walker <rswwalker at gmail dot com> - 0.4.14-96
 - Reworked spec file for latest release
 - Commented and cleaned up sections
 - Added additional documents to %files
 
-* Mon Nov 21 2005 Bastiaan Bakker <bastiaan.bakker@lifeline.nl> - 0.4.13-0.1266.1
+* Mon Nov 21 2005 Bastiaan Bakker <redacted> - 0.4.13-0.1266.1
 - upstream snapshot 1266
 - added condrestart patch
 - stop and start service on update or removal
 
-* Sun Nov 13 2005 Bastiaan Bakker <bastiaan.bakker@lifeline.nl> - 0.4.13-0.1264.2
+* Sun Nov 13 2005 Bastiaan Bakker <redacted> - 0.4.13-0.1264.2
 - run %post and %preun for kernel package, not main package
 
-* Sun Nov 13 2005 Bastiaan Bakker <bastiaan.bakker@lifeline.nl> - 0.4.13-0.1264.1
+* Sun Nov 13 2005 Bastiaan Bakker <redacted> - 0.4.13-0.1264.1
 - updated to snapshot 1264
 
-* Thu Nov 03 2005 Bastiaan Bakker <bastiaan.bakker@lifeline.nl> - 0.4.12-6
+* Thu Nov 03 2005 Bastiaan Bakker <redacted> - 0.4.12-6
 - added openssl-devel build requirement
 - removed '.ko' extension in modprobe command
 
-* Wed Nov 02 2005 Bastiaan Bakker <bastiaan.bakker@lifeline.nl> - 0.4.12-5
+* Wed Nov 02 2005 Bastiaan Bakker <redacted> - 0.4.12-5
 - fixed kernel-devel BuildRequires
 
-* Fri Sep 23 2005 Bastiaan Bakker <bastiaan.bakker@lifeline.nl> - 0.4.12-4
+* Fri Sep 23 2005 Bastiaan Bakker <redacted> - 0.4.12-4
 - fixed modprobe -r 'FATAL' message
 - run depmod with correct kernel version
 
-* Fri Sep 23 2005 Bastiaan Bakker <bastiaan.bakker@lifeline.nl> - 0.4.12-3
+* Fri Sep 23 2005 Bastiaan Bakker <redacted> - 0.4.12-3
 - added config files
 - set kernel module file permissions to 744
 - fixed provides/requires of kernel module
 - removed BuildArch restriction
 
-* Thu Sep 22 2005 Bastiaan Bakker <bastiaan.bakker@lifeline.nl> - 0.4.12-2
+* Thu Sep 22 2005 Bastiaan Bakker <redacted> - 0.4.12-2
 - create separate subpackage for kernel module
 - include man pages
 - added kernel compatibility patch for kernels < 2.6.11
 
-* Wed Aug 03 2005 Bastiaan Bakker <bastiaan.bakker@lifeline.nl>
+* Wed Aug 03 2005 Bastiaan Bakker <redacted>
 - First version.
 
