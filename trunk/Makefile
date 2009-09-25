@@ -24,7 +24,7 @@ endif
 KVER := $(shell $(CC) $(CFLAGS) -E -dM $(VERSION_FILE) | \
 	grep UTS_RELEASE | awk '{ print $$3 }' | sed 's/\"//g')
 
-KMOD := /lib/modules/$(KVER)/kernel
+KMOD := /lib/modules/$(KVER)/extra
 
 KMAJ := $(shell echo $(KVER) | \
 	sed -e 's/^\([0-9][0-9]*\)\.[0-9][0-9]*\.[0-9][0-9]*.*/\1/')
