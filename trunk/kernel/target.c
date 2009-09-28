@@ -289,6 +289,9 @@ void target_del_all(void)
 
 	down(&target_list_sem);
 
+	if (!list_empty(&target_list))
+		iprintk("Removing all connections, sessions and targets\n");
+
 	list_for_each_entry_safe(target, tmp, &target_list, t_list) {
 		init_completion(&done);
 		target->done = &done;
