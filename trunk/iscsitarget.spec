@@ -77,7 +77,7 @@ Source0: %{name}-%{version}.tar.gz
 ## Patches
 
 ## Install Requirements
-Requires: kmod-%{name} = %{?epoch:%{epoch}:}%{version}-%{release}
+Requires: kmod-%{name} = %{version}
 
 ## Build Requirements
 BuildRequires: kernel >= 2.6
@@ -111,7 +111,7 @@ Requires: %{ktype}-devel, gcc, make, patch, binutils, openssl-devel
 Requires: dkms >= 2
 
 ## Install Provides
-Provides: kmod-%{name} = %{?epoch:%{epoch}:}%{version}-%{release}
+Provides: kmod-%{name} = %{version}
 
 ## Description
 %description -n kmod-%{name}
@@ -138,7 +138,7 @@ Requires(postun): /sbin/depmod
 
 ## Install Provides
 Provides: kernel-modules = %{kver}
-Provides: kmod-%{name} = %{?epoch:%{epoch}:}%{version}-%{release}
+Provides: kmod-%{name} = %{version}
 
 ## Description
 %description -n kmod-%{name}
