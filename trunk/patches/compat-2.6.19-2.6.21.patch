@@ -16,7 +16,7 @@ Index: kernel/iscsi.c
 ===================================================================
 --- 1/kernel/iscsi.c	(working copy)
 +++ 2/kernel/iscsi.c	(revision 137)
-@@ -1762,7 +1762,8 @@ static int iscsi_init(void)
+@@ -1767,7 +1767,8 @@ static int iscsi_init(void)
  	if ((err = event_init()) < 0)
  		goto err;
 
@@ -30,7 +30,7 @@ Index: kernel/tio.c
 ===================================================================
 --- 1/kernel/tio.c	(working copy)
 +++ 2/kernel/tio.c	(revision 137)
-@@ -110,6 +110,7 @@ int tio_sync(struct iet_volume *lu, stru
+@@ -110,7 +110,8 @@ int tio_sync(struct iet_volume *lu, stru
 
  int tio_init(void)
  {
@@ -39,8 +39,11 @@ Index: kernel/tio.c
 +				      0, 0, NULL, NULL);
  	return  tio_cache ? 0 : -ENOMEM;
  }
---- a/kernel/ua.c
-+++ b/kernel/ua.c
+ 
+Index: kernel/ua.c
+===================================================================
+--- 1/kernel/ua.c
++++ 2/kernel/ua.c
 @@ -18,7 +18,8 @@ static struct kmem_cache *ua_cache;
 
  int ua_init(void)
