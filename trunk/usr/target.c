@@ -75,6 +75,9 @@ void target_list_build_ifaddrs(struct connection *conn, u32 tid, char *addr,
 	ifa = ifaddr;
 
 	while (ifa) {
+		if (!ifa->ifa_addr)
+			continue;
+
 		int sa_family = ifa->ifa_addr->sa_family;
 
 		if (sa_family == family) {
