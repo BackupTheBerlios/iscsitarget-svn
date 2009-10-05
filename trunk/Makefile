@@ -133,7 +133,7 @@ ifeq ($(MANDIR),)
 	MANDIR := /usr/share/man
 endif
 
-DOCS:= ChangeLog COPYING README README.vmware
+DOCS:= ChangeLog COPYING RELEASE_NOTES README README.vmware README.initiators
 
 ifeq ($(DOCDIR),)
 	DOCDIR := /usr/share/doc/iscsitarget

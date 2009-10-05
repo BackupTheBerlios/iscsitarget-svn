@@ -3,7 +3,7 @@
 ##
 
 ## IET Release
-%define iet_version 0.4.17
+%define iet_version 1.4.18
 
 ## Package Revision
 %define revision 1
@@ -308,7 +308,7 @@ fi
 %config(noreplace) %{_sysconfdir}/iet/ietd.conf
 %config(noreplace) %{_sysconfdir}/iet/initiators.allow
 %config(noreplace) %{_sysconfdir}/iet/targets.allow
-%doc ChangeLog COPYING README README.vmware README.initiators
+%doc ChangeLog COPYING RELEASE_NOTES README README.vmware README.initiators
 %endif
 
 
