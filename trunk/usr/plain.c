@@ -605,8 +605,7 @@ static void plain_target_init(FILE *fp)
 			tid = 0;
 			if (!(p = target_sep_string(&q)))
 				continue;
-			if (__plain_target_create(&tid, p, 0))
-				log_debug(1, "creating target %s", p);
+			__plain_target_create(&tid, p, 0);
 		} else if (!strcasecmp(p, "Alias") && tid) {
 			;
 		} else if (!strcasecmp(p, "MaxSessions") && tid) {

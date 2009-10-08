@@ -259,6 +259,8 @@ int target_add(u32 *tid, char *name)
 
 	isns_target_register(name);
 
+	log_debug(1, "created target %s", name);
+
 	return 0;
 out:
 	free(target);
