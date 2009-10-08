@@ -215,6 +215,7 @@ enum connection_state_bit {
 	CONN_ACTIVE,
 	CONN_CLOSING,
 	CONN_WSPACE_WAIT,
+	CONN_NEED_NOP_IN,
 };
 
 #define ISCSI_CONN_IOV_MAX	(((256 << 10) >> PAGE_SHIFT) + 1)
@@ -241,6 +242,7 @@ struct iscsi_conn {
 	atomic_t nr_busy_cmnds;
 	struct list_head pdu_list;		/* in/outcoming pdus */
 	struct list_head write_list;		/* list of data pdus to be sent */
+	struct timer_list nop_timer;
 
 	struct iscsi_cmnd *read_cmnd;
 	struct msghdr read_msg;
@@ -328,6 +330,7 @@ extern void send_data_rsp(struct iscsi_cmnd *, void (*)(struct iscsi_cmnd *));
 extern void send_scsi_rsp(struct iscsi_cmnd *, void (*)(struct iscsi_cmnd *));
 extern void iscsi_cmnd_set_sense(struct iscsi_cmnd *, u8 sense_key, u8 asc,
 				 u8 ascq);
+extern void send_nop_in(struct iscsi_conn *);
 
 /* conn.c */
 extern struct iscsi_conn *conn_lookup(struct iscsi_session *, u16);

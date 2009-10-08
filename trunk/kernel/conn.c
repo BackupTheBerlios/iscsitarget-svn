@@ -158,6 +158,7 @@ int conn_free(struct iscsi_conn *conn)
 	list_del(&conn->list);
 	list_del(&conn->poll_list);
 
+	del_timer_sync(&conn->nop_timer);
 	digest_cleanup(conn);
 	kfree(conn);
 
@@ -192,6 +193,7 @@ static int iet_conn_alloc(struct iscsi_session *session, struct conn_info *info)
 	INIT_LIST_HEAD(&conn->pdu_list);
 	INIT_LIST_HEAD(&conn->write_list);
 	INIT_LIST_HEAD(&conn->poll_list);
+	init_timer(&conn->nop_timer);
 
 	list_add(&conn->list, &session->conn_list);
 

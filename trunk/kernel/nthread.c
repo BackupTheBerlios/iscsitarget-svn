@@ -1,6 +1,8 @@
 /*
  * Network thread.
  * (C) 2004 - 2005 FUJITA Tomonori <tomof@acm.org>
+ * (C) 2008 Arne Redlich <agr@powerkom-dd.de>
+ *
  * This code is licenced under the GPL.
  */
 
@@ -567,6 +569,45 @@ static int send(struct iscsi_conn *conn)
 	return 0;
 }
 
+static void conn_nop_timeout(unsigned long data)
+{
+	struct iscsi_conn *conn = (struct iscsi_conn *)data;
+
+	if (test_bit(CONN_ACTIVE, &conn->state))
+		set_bit(CONN_NEED_NOP_IN, &conn->state);
+
+	dprintk(D_THREAD, "conn %llu:%hu, NOP timer %p\n", conn->session->sid,
+		conn->cid, &conn->nop_timer);
+
+	nthread_wakeup(conn->session->target);
+}
+
+static void conn_reset_nop_timer(struct iscsi_conn *conn)
+{
+	struct iscsi_target *target = conn->session->target;
+
+	if (target->trgt_param.nop_interval)
+		mod_timer(&conn->nop_timer,
+			  jiffies + HZ * target->trgt_param.nop_interval);
+}
+
+static void conn_start_nop_timer(struct iscsi_conn *conn)
+{
+	struct iscsi_target *target = conn->session->target;
+
+	if (!target->trgt_param.nop_interval || timer_pending(&conn->nop_timer))
+		return;
+
+	conn->nop_timer.data = (unsigned long)conn;
+	conn->nop_timer.function = conn_nop_timeout;
+
+	dprintk(D_THREAD, "conn %llu:%hu, NOP timer %p\n", conn->session->sid,
+		conn->cid, &conn->nop_timer);
+
+	mod_timer(&conn->nop_timer,
+		  jiffies + HZ * target->trgt_param.nop_interval);
+}
+
 static void process_io(struct iscsi_conn *conn)
 {
 	struct iscsi_target *target = conn->session->target;
@@ -574,8 +615,10 @@ static void process_io(struct iscsi_conn *conn)
 
 	res = recv(conn);
 
-	if (is_data_available(conn) > 0 || res > 0)
+	if (is_data_available(conn) > 0 || res > 0) {
+		conn_reset_nop_timer(conn);
 		wakeup = 1;
+	}
 
 	if (!test_bit(CONN_ACTIVE, &conn->state)) {
 		wakeup = 1;
@@ -587,12 +630,19 @@ static void process_io(struct iscsi_conn *conn)
 
 	res = send(conn);
 
-	if (!list_empty(&conn->write_list) || conn->write_cmnd)
+	if (!list_empty(&conn->write_list) || conn->write_cmnd) {
+		conn_reset_nop_timer(conn);
 		wakeup = 1;
+	}
 
 out:
 	if (wakeup)
 		nthread_wakeup(target);
+	else if (test_and_clear_bit(CONN_NEED_NOP_IN, &conn->state)) {
+		send_nop_in(conn);
+		nthread_wakeup(target);
+	} else
+		conn_start_nop_timer(conn);
 
 	return;
 }
@@ -604,6 +654,9 @@ static void close_conn(struct iscsi_conn *conn)
 	struct iscsi_cmnd *cmnd;
 
 	assert(conn);
+
+	if (session->target->trgt_param.nop_interval)
+		del_timer_sync(&conn->nop_timer);
 
 	conn->sock->ops->shutdown(conn->sock, 2);
 
