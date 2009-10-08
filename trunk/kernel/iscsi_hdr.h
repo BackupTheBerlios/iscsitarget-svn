@@ -43,7 +43,7 @@ struct iscsi_hdr {
 #define ISCSI_OPCODE_MASK		0x3F
 
 /* Client to Server Message Opcode values */
-#define ISCSI_OP_NOOP_OUT		0x00
+#define ISCSI_OP_NOP_OUT		0x00
 #define ISCSI_OP_SCSI_CMD		0x01
 #define ISCSI_OP_SCSI_TASK_MGT_MSG	0x02
 #define ISCSI_OP_LOGIN_CMD		0x03
@@ -58,7 +58,7 @@ struct iscsi_hdr {
 #define ISCSI_OP_VENDOR4_CMD		0x1f
 
 /* Server to Client Message Opcode values */
-#define ISCSI_OP_NOOP_IN		0x20
+#define ISCSI_OP_NOP_IN 		0x20
 #define ISCSI_OP_SCSI_RSP		0x21
 #define ISCSI_OP_SCSI_TASK_MGT_RSP	0x22
 #define ISCSI_OP_LOGIN_RSP		0x23

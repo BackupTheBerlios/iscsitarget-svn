@@ -825,7 +825,7 @@ static void scsi_cmnd_exec(struct iscsi_cmnd *cmnd)
 	}
 }
 
-static int noop_out_start(struct iscsi_conn *conn, struct iscsi_cmnd *cmnd)
+static int nop_out_start(struct iscsi_conn *conn, struct iscsi_cmnd *cmnd)
 {
 	u32 size, tmp;
 	int i, err = 0;
@@ -1313,7 +1313,7 @@ out:
 	iscsi_cmnd_init_write(rsp);
 }
 
-static void noop_out_exec(struct iscsi_cmnd *req)
+static void nop_out_exec(struct iscsi_cmnd *req)
 {
 	struct iscsi_cmnd *rsp;
 	struct iscsi_nop_in_hdr *rsp_hdr;
@@ -1322,7 +1322,7 @@ static void noop_out_exec(struct iscsi_cmnd *req)
 		rsp = iscsi_cmnd_create_rsp_cmnd(req, 1);
 
 		rsp_hdr = (struct iscsi_nop_in_hdr *)&rsp->pdu.bhs;
-		rsp_hdr->opcode = ISCSI_OP_NOOP_IN;
+		rsp_hdr->opcode = ISCSI_OP_NOP_IN;
 		rsp_hdr->flags = ISCSI_FLG_FINAL;
 		rsp_hdr->itt = req->pdu.bhs.itt;
 		rsp_hdr->ttt = cpu_to_be32(ISCSI_RESERVED_TAG);
@@ -1365,8 +1365,8 @@ static void iscsi_cmnd_exec(struct iscsi_cmnd *cmnd)
 	dprintk(D_GENERIC, "%p,%x,%u\n", cmnd, cmnd_opcode(cmnd), cmnd->pdu.bhs.sn);
 
 	switch (cmnd_opcode(cmnd)) {
-	case ISCSI_OP_NOOP_OUT:
-		noop_out_exec(cmnd);
+	case ISCSI_OP_NOP_OUT:
+		nop_out_exec(cmnd);
 		break;
 	case ISCSI_OP_SCSI_CMD:
 		scsi_cmnd_exec(cmnd);
@@ -1491,7 +1491,7 @@ void cmnd_tx_start(struct iscsi_cmnd *cmnd)
 	conn->write_size = sizeof(cmnd->pdu.bhs);
 
 	switch (cmnd_opcode(cmnd)) {
-	case ISCSI_OP_NOOP_IN:
+	case ISCSI_OP_NOP_IN:
 		cmnd_set_sn(cmnd, 1);
 		cmnd_send_pdu(conn, cmnd);
 		break;
@@ -1547,7 +1547,7 @@ void cmnd_tx_end(struct iscsi_cmnd *cmnd)
 
 	dprintk(D_GENERIC, "%p:%x\n", cmnd, cmnd_opcode(cmnd));
 	switch (cmnd_opcode(cmnd)) {
-	case ISCSI_OP_NOOP_IN:
+	case ISCSI_OP_NOP_IN:
 	case ISCSI_OP_SCSI_RSP:
 	case ISCSI_OP_SCSI_TASK_MGT_RSP:
 	case ISCSI_OP_TEXT_RSP:
@@ -1662,8 +1662,8 @@ void cmnd_rx_start(struct iscsi_cmnd *cmnd)
 		return;
 
 	switch (cmnd_opcode(cmnd)) {
-	case ISCSI_OP_NOOP_OUT:
-		err = noop_out_start(conn, cmnd);
+	case ISCSI_OP_NOP_OUT:
+		err = nop_out_start(conn, cmnd);
 		break;
 	case ISCSI_OP_SCSI_CMD:
 		if (!(err = cmnd_insert_hash(cmnd)))
@@ -1705,7 +1705,7 @@ void cmnd_rx_end(struct iscsi_cmnd *cmnd)
 	dprintk(D_GENERIC, "%p:%x\n", cmnd, cmnd_opcode(cmnd));
 	switch (cmnd_opcode(cmnd)) {
 	case ISCSI_OP_SCSI_REJECT:
-	case ISCSI_OP_NOOP_OUT:
+	case ISCSI_OP_NOP_OUT:
 	case ISCSI_OP_SCSI_CMD:
 	case ISCSI_OP_SCSI_TASK_MGT_MSG:
 	case ISCSI_OP_TEXT_CMD:
