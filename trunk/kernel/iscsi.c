@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2002-2003 Ardis Technolgies <roman@ardistech.com>
+ * Copyright (C) 2008 Arne Redlich <agr@powerkom-dd.de>
  *
  * Released under the terms of the GNU GPL v2.0.
  */
@@ -406,6 +407,12 @@ static void iscsi_cmnd_remove(struct iscsi_cmnd *cmnd)
 
 	if (!cmnd)
 		return;
+
+	if (cmnd_timer_active(cmnd)) {
+		clear_cmnd_timer_active(cmnd);
+		del_timer_sync(&cmnd->timer);
+	}
+
 	dprintk(D_GENERIC, "%p\n", cmnd);
 	conn = cmnd->conn;
 	kfree(cmnd->pdu.ahs);
@@ -565,7 +572,7 @@ static struct iscsi_cmnd *cmnd_find_hash(struct iscsi_session *session, u32 itt,
 	return cmnd;
 }
 
-static int cmnd_insert_hash(struct iscsi_cmnd *cmnd)
+static int cmnd_insert_hash_ttt(struct iscsi_cmnd *cmnd, u32 ttt)
 {
 	struct iscsi_session *session = cmnd->conn->session;
 	struct iscsi_cmnd *tmp;
@@ -573,17 +580,11 @@ static int cmnd_insert_hash(struct iscsi_cmnd *cmnd)
 	int err = 0;
 	u32 itt = cmnd->pdu.bhs.itt;
 
-	dprintk(D_GENERIC, "%p:%x\n", cmnd, itt);
-	if (itt == ISCSI_RESERVED_TAG) {
-		err = -ISCSI_REASON_PROTOCOL_ERROR;
-		goto out;
-	}
-
 	head = &session->cmnd_hash[cmnd_hashfn(cmnd->pdu.bhs.itt)];
 
 	spin_lock(&session->cmnd_hash_lock);
 
-	tmp = __cmnd_find_hash(session, itt, ISCSI_RESERVED_TAG);
+	tmp = __cmnd_find_hash(session, itt, ttt);
 	if (!tmp) {
 		list_add_tail(&cmnd->hash_list, head);
 		set_cmnd_hashed(cmnd);
@@ -592,12 +593,24 @@ static int cmnd_insert_hash(struct iscsi_cmnd *cmnd)
 
 	spin_unlock(&session->cmnd_hash_lock);
 
+	return err;
+}
+
+static int cmnd_insert_hash(struct iscsi_cmnd *cmnd)
+{
+	int err;
+
+	dprintk(D_GENERIC, "%p:%x\n", cmnd, cmnd->pdu.bhs.itt);
+
+	if (cmnd->pdu.bhs.itt == ISCSI_RESERVED_TAG)
+		return -ISCSI_REASON_PROTOCOL_ERROR;
+
+	err = cmnd_insert_hash_ttt(cmnd, ISCSI_RESERVED_TAG);
 	if (!err) {
 		update_stat_sn(cmnd);
 		err = check_cmd_sn(cmnd);
 	}
 
-out:
 	return err;
 }
 
@@ -613,8 +626,8 @@ static void cmnd_remove_hash(struct iscsi_cmnd *cmnd)
 
 	spin_lock(&session->cmnd_hash_lock);
 
-	tmp = __cmnd_find_hash(session, cmnd->pdu.bhs.itt, ISCSI_RESERVED_TAG);
-
+	tmp = __cmnd_find_hash(session, cmnd->pdu.bhs.itt,
+			       cmnd->target_task_tag);
 	if (tmp && tmp == cmnd)
 		__cmnd_remove_hash(tmp);
 	else
@@ -831,18 +844,28 @@ static int nop_out_start(struct iscsi_conn *conn, struct iscsi_cmnd *cmnd)
 	int i, err = 0;
 
 	if (cmnd_ttt(cmnd) != cpu_to_be32(ISCSI_RESERVED_TAG)) {
-		/*
-		 * We don't request a NOP-Out by sending a NOP-In.
-		 * See 10.18.2 in the draft 20.
-		 */
-		eprintk("initiator bug %x\n", cmnd_itt(cmnd));
-		err = -ISCSI_REASON_PROTOCOL_ERROR;
-		goto out;
+		cmnd->req = cmnd_find_hash(conn->session, cmnd->pdu.bhs.itt,
+					   cmnd->pdu.bhs.ttt);
+		if (!cmnd->req) {
+			/*
+			 * We didn't request this NOP-Out (by sending a
+			 * NOP-In, see 10.18.2 of the RFC) or our fake NOP-Out
+			 * timed out.
+			 */
+			eprintk("initiator bug %x\n", cmnd_itt(cmnd));
+			err = -ISCSI_REASON_PROTOCOL_ERROR;
+			goto out;
+		}
+
+		del_timer_sync(&cmnd->req->timer);
+		clear_cmnd_timer_active(cmnd->req);
+		dprintk(D_GENERIC, "NOP-Out: %p, ttt %x, timer %p\n",
+			cmnd->req, cmnd_ttt(cmnd->req), &cmnd->req->timer);
 	}
 
 	if (cmnd_itt(cmnd) == cpu_to_be32(ISCSI_RESERVED_TAG)) {
 		if (!(cmnd->pdu.bhs.opcode & ISCSI_OP_IMMEDIATE))
-			eprintk("%s\n","initiator bug!");
+			eprintk("%s\n", "initiator bug!");
 		update_stat_sn(cmnd);
 		err = check_cmd_sn(cmnd);
 		if (err)
@@ -1313,19 +1336,24 @@ out:
 	iscsi_cmnd_init_write(rsp);
 }
 
+static void nop_hdr_setup(struct iscsi_hdr *hdr, u8 opcode, __be32 itt,
+			  __be32 ttt)
+{
+	hdr->opcode = opcode;
+	hdr->flags = ISCSI_FLG_FINAL;
+	hdr->itt = itt;
+	hdr->ttt = ttt;
+}
+
 static void nop_out_exec(struct iscsi_cmnd *req)
 {
 	struct iscsi_cmnd *rsp;
-	struct iscsi_nop_in_hdr *rsp_hdr;
 
 	if (cmnd_itt(req) != cpu_to_be32(ISCSI_RESERVED_TAG)) {
 		rsp = iscsi_cmnd_create_rsp_cmnd(req, 1);
 
-		rsp_hdr = (struct iscsi_nop_in_hdr *)&rsp->pdu.bhs;
-		rsp_hdr->opcode = ISCSI_OP_NOP_IN;
-		rsp_hdr->flags = ISCSI_FLG_FINAL;
-		rsp_hdr->itt = req->pdu.bhs.itt;
-		rsp_hdr->ttt = cpu_to_be32(ISCSI_RESERVED_TAG);
+		nop_hdr_setup(&rsp->pdu.bhs, ISCSI_OP_NOP_IN, req->pdu.bhs.itt,
+			      cpu_to_be32(ISCSI_RESERVED_TAG));
 
 		if (req->pdu.datasize)
 			assert(req->tio);
@@ -1340,8 +1368,84 @@ static void nop_out_exec(struct iscsi_cmnd *req)
 		assert(get_pgcnt(req->pdu.datasize, 0) < ISCSI_CONN_IOV_MAX);
 		rsp->pdu.datasize = req->pdu.datasize;
 		iscsi_cmnd_init_write(rsp);
-	} else
+	} else {
+		if (req->req) {
+			dprintk(D_GENERIC, "releasing NOP-Out %p, ttt %x; "
+				"removing NOP-In %p, ttt %x\n", req->req,
+				cmnd_ttt(req->req), req, cmnd_ttt(req));
+			cmnd_release(req->req, 0);
+		}
 		iscsi_cmnd_remove(req);
+	}
+}
+
+static void nop_in_timeout(unsigned long data)
+{
+	struct iscsi_cmnd *req = (struct iscsi_cmnd *)data;
+
+	printk(KERN_INFO "NOP-In ping timed out - closing sid:cid %llu:%u\n",
+	       req->conn->session->sid, req->conn->cid);
+	clear_cmnd_timer_active(req);
+	conn_close(req->conn);
+}
+
+/* create a fake NOP-Out req and treat the NOP-In as our rsp to it */
+void send_nop_in(struct iscsi_conn *conn)
+{
+	struct iscsi_cmnd *req = cmnd_alloc(conn, 1);
+	struct iscsi_cmnd *rsp = iscsi_cmnd_create_rsp_cmnd(req, 0);
+
+	req->target_task_tag = get_next_ttt(conn->session);
+
+
+	nop_hdr_setup(&req->pdu.bhs, ISCSI_OP_NOP_OUT,
+		      cpu_to_be32(ISCSI_RESERVED_TAG), req->target_task_tag);
+	nop_hdr_setup(&rsp->pdu.bhs, ISCSI_OP_NOP_IN,
+		      cpu_to_be32(ISCSI_RESERVED_TAG), req->target_task_tag);
+
+	dprintk(D_GENERIC, "NOP-Out: %p, ttt %x, timer %p; "
+		"NOP-In: %p, ttt %x;\n", req, cmnd_ttt(req), &req->timer, rsp,
+		cmnd_ttt(rsp));
+
+	init_timer(&req->timer);
+	req->timer.data = (unsigned long)req;
+	req->timer.function = nop_in_timeout;
+
+	if (cmnd_insert_hash_ttt(req, req->target_task_tag)) {
+		eprintk("%s\n",
+			"failed to insert fake NOP-Out into hash table");
+		cmnd_release(rsp, 0);
+		cmnd_release(req, 0);
+	} else
+		iscsi_cmnd_init_write(rsp);
+}
+
+static void nop_in_tx_end(struct iscsi_cmnd *cmnd)
+{
+	struct iscsi_conn *conn = cmnd->conn;
+	u32 t;
+
+	if (cmnd->pdu.bhs.ttt == cpu_to_be32(ISCSI_RESERVED_TAG))
+		return;
+
+	/*
+	 * NOP-In ping issued by the target.
+	 * FIXME: Sanitize the NOP timeout earlier, during configuration
+	 */
+	t = conn->session->target->trgt_param.nop_timeout;
+
+	if (!t || t > conn->session->target->trgt_param.nop_interval) {
+		eprintk("Adjusting NOPTimeout of tid %u from %u to %u "
+			"(== NOPInterval)\n", conn->session->target->tid,
+			conn->session->target->trgt_param.nop_timeout,
+			conn->session->target->trgt_param.nop_interval);
+		t = conn->session->target->trgt_param.nop_interval;
+		conn->session->target->trgt_param.nop_timeout = t;
+	}
+
+	dprintk(D_GENERIC, "NOP-In %p, %x: timer %p\n",	cmnd, cmnd_ttt(cmnd),
+		&cmnd->req->timer); set_cmnd_timer_active(cmnd->req);
+	mod_timer(&cmnd->req->timer, jiffies + HZ * t);
 }
 
 static void logout_exec(struct iscsi_cmnd *req)
@@ -1492,7 +1596,14 @@ void cmnd_tx_start(struct iscsi_cmnd *cmnd)
 
 	switch (cmnd_opcode(cmnd)) {
 	case ISCSI_OP_NOP_IN:
-		cmnd_set_sn(cmnd, 1);
+		if (cmnd->pdu.bhs.itt == ISCSI_RESERVED_TAG) {
+			/* NOP-In ping generated by us. Don't advance StatSN. */
+			cmnd_set_sn(cmnd, 0);
+			cmnd_set_sn(cmnd->req, 0);
+			cmnd->pdu.bhs.sn = cpu_to_be32(conn->stat_sn);
+			cmnd->req->pdu.bhs.sn = cpu_to_be32(conn->stat_sn);
+		} else
+			cmnd_set_sn(cmnd, 1);
 		cmnd_send_pdu(conn, cmnd);
 		break;
 	case ISCSI_OP_SCSI_RSP:
@@ -1548,6 +1659,8 @@ void cmnd_tx_end(struct iscsi_cmnd *cmnd)
 	dprintk(D_GENERIC, "%p:%x\n", cmnd, cmnd_opcode(cmnd));
 	switch (cmnd_opcode(cmnd)) {
 	case ISCSI_OP_NOP_IN:
+		nop_in_tx_end(cmnd);
+		break;
 	case ISCSI_OP_SCSI_RSP:
 	case ISCSI_OP_SCSI_TASK_MGT_RSP:
 	case ISCSI_OP_TEXT_RSP:

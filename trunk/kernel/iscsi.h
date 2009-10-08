@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2002-2003 Ardis Technolgies <roman@ardistech.com>
+ * Copyright (C) 2008 Arne Redlich <agr@powerkom-dd.de>
  *
  * Released under the terms of the GNU GPL v2.0.
  */
@@ -286,6 +287,8 @@ struct iscsi_cmnd {
 
 	u8 status;
 
+	struct timer_list timer;
+
 	u32 r2t_sn;
 	u32 r2t_length;
 	u32 is_unsolicited_data;
@@ -471,6 +474,7 @@ enum cmnd_flags {
 	CMND_pending,
 	CMND_tmfabort,
 	CMND_rxstart,
+	CMND_timer_active,
 };
 
 #define set_cmnd_hashed(cmnd)	set_bit(CMND_hashed, &(cmnd)->flags)
@@ -500,6 +504,11 @@ enum cmnd_flags {
 
 #define set_cmnd_rxstart(cmnd)	set_bit(CMND_rxstart, &(cmnd)->flags)
 #define cmnd_rxstart(cmnd)	test_bit(CMND_rxstart, &(cmnd)->flags)
+
+#define set_cmnd_timer_active(cmnd)  set_bit(CMND_timer_active, &(cmnd)->flags)
+#define clear_cmnd_timer_active(cmnd) \
+	                        clear_bit(CMND_timer_active, &(cmnd)->flags)
+#define cmnd_timer_active(cmnd) test_bit(CMND_timer_active, &(cmnd)->flags)
 
 #define VENDOR_ID	"IET"
 #define PRODUCT_ID	"VIRTUAL-DISK"
