@@ -441,15 +441,20 @@ static void login_start(struct connection *conn)
 			return;
 		}
 
-		if (!(conn->tid = target_find_by_name(target_name))
-			|| !cops->initiator_allow(conn->tid, conn->fd, name)
-			|| !cops->target_allow(conn->tid, (struct sockaddr *) &ss)
-			|| !isns_scn_allow(conn->tid, name)) {
+		struct target * const target =
+			target_find_by_name(target_name);
+
+		if (!target
+		    || !cops->initiator_allow(target->tid, conn->fd, name)
+		    || !cops->target_allow(target->tid, (struct sockaddr *) &ss)
+		    || !isns_scn_allow(target->tid, name)) {
 			rsp->status_class = ISCSI_STATUS_INITIATOR_ERR;
 			rsp->status_detail = ISCSI_STATUS_TGT_NOT_FOUND;
 			conn->state = STATE_EXIT;
 			return;
 		}
+
+		conn->tid = target->tid;
 
 /* 		if (conn->target->max_sessions && */
 /* 		    (++conn->target->session_cnt > conn->target->max_sessions)) { */

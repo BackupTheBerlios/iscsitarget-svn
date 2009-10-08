@@ -405,6 +405,8 @@ static int match(u32 tid, struct sockaddr *sa, char *initiator, char *filename)
 	 * implement 'reload feature'. It's slow, however, it doesn't matter.
 	 */
 	while ((p = fgets(buf, sizeof(buf), fp))) {
+		struct target *target;
+
 		q = &buf[strlen(buf) - 1];
 
 		if (*q != '\n')
@@ -419,7 +421,13 @@ static int match(u32 tid, struct sockaddr *sa, char *initiator, char *filename)
 		if (!p || *p == '#')
 			continue;
 
-		if (target_find_by_name(p) != tid && strcmp(p, "ALL"))
+		target = target_find_by_name(p);
+		u32 tid = 0;
+
+		if (target)
+			tid = target->tid;
+
+		if (tid != tid && strcmp(p, "ALL"))
 			continue;
 
 		if (__match(sa, initiator, q))
@@ -645,10 +653,14 @@ static void plain_account_init(FILE *fp)
 			continue;
 
 		if (!strcasecmp(p, "Target")) {
+			struct target *target;
 			tid = 0;
 			if (!(p = target_sep_string(&q)))
 				continue;
-			tid = target_find_by_name(p);
+
+			target = target_find_by_name(p);
+			if (target)
+				tid = target->tid;
 		} else if (!((idx = param_index_by_name(p, user_keys)) < 0)) {
 			char *name, *pass;
 			name = target_sep_string(&q);

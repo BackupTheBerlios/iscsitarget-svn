@@ -208,8 +208,8 @@ extern void session_remove(struct session *session);
 extern struct __qelem targets_list;
 extern int target_add(u32 *, char *);
 extern int target_del(u32);
-extern u32 target_find_by_name(const char *name);
-struct target * target_find_by_id(u32);
+extern struct target * target_find_by_name(const char *name);
+extern struct target * target_find_by_id(u32);
 extern void target_list_build(struct connection *, char *);
 
 /* message.c */

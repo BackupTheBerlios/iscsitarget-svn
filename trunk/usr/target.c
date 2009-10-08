@@ -164,16 +164,16 @@ void target_list_build(struct connection *conn, char *name)
 	}
 }
 
-u32 target_find_by_name(const char *name)
+struct target* target_find_by_name(const char *name)
 {
 	struct target *target;
 
 	list_for_each_entry(target, &targets_list, tlist) {
 		if (!strcasecmp(target->name, name))
-			return target->tid;
+			return target;
 	}
 
-	return 0;
+	return NULL;
 }
 
 struct target* target_find_by_id(u32 tid)
