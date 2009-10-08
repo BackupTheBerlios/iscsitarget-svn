@@ -158,7 +158,7 @@ void session_remove(struct session *session)
 
 	if (session->target) {
 		remque(&session->slist);
-/* 		session->target->nr_sessions--; */
+		--session->target->nr_sessions;
 	}
 
 	free(session->initiator);

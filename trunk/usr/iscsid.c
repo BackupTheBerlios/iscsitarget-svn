@@ -456,12 +456,14 @@ static void login_start(struct connection *conn)
 
 		conn->tid = target->tid;
 
-/*		if (conn->target->max_sessions && */
-/*		    (++conn->target->session_cnt > conn->target->max_sessions)) { */
-/*			conn->target->session_cnt--; */
-/*			login_rsp_ini_err(conn, ISCSI_STATUS_TOO_MANY_CONN); */
-/*			return; */
-/*		} */
+		if (target->max_nr_sessions &&
+		    (++target->nr_sessions > target->max_nr_sessions)) {
+			--target->nr_sessions;
+			log_debug(1, "rejecting session for target '%s': "
+				  "too many sessions", target_name);
+			login_rsp_ini_err(conn, ISCSI_STATUS_TOO_MANY_CONN);
+			return;
+		}
 
 		if (ki->param_get(conn->tid, 0, key_session,
 				  conn->session_param))

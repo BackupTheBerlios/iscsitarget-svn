@@ -617,7 +617,12 @@ static void plain_target_init(FILE *fp)
 		} else if (!strcasecmp(p, "Alias") && tid) {
 			;
 		} else if (!strcasecmp(p, "MaxSessions") && tid) {
-			/* target->max_sessions = strtol(q, &q, 0); */
+			struct target * const target =
+				target_find_by_id(tid);
+			if (target)
+				target->max_nr_sessions = strtol(q, &q, 0);
+			else
+				log_warning("Target '%s' not found", q);
 		} else if (!strcasecmp(p, "Lun") && tid) {
 			u32 lun = strtol(q, &q, 10);
 			__plain_lunit_create(tid, lun, q, 0);

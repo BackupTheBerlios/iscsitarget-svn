@@ -32,6 +32,7 @@ Target iqn.2001\-04.com.example:storage.disk2.sys1.xyz
     HeaderDigest None
     DataDigest None
     MaxConnections 1
+    MaxSessions 0
     InitialR2T Yes
     ImmediateData No
     MaxRecvDataSegmentLength 8192
@@ -205,7 +206,9 @@ Optional. If set to "CRC32C" and the initiator is configured accordingly, the in
 .TP
 .B [MaxConnections <value>]
 Optional. The number of connections within a session. Has to be set to "1" (in words: one), which is also the default since MC/S is not supported.
-.TP 
+.TP
+.B [MaxSessions <value>]
+Optional. The maximum number of sessions for this target. If this is set to 0 (wich is the default) there is no explicit session limit.
 .B [InitialR2T <Yes|No>]
 Optional. If set to "Yes" (default), the initiator has to wait for the target to solicit SCSI data before sending it. Setting it to "No" allows the initiator to send a burst of
 .B FirstBurstLength
