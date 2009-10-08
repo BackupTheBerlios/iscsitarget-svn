@@ -287,6 +287,8 @@ struct iscsi_key target_keys[] = {
 	{"Wthreads", SET_KEY_VALUES(NR_WTHREADS), &minimum_ops},
 	{"Type", 0, 0, 16, &minimum_ops},
 	{"QueuedCommands", SET_KEY_VALUES(NR_QUEUED_CMNDS), &minimum_ops},
+	{"NOPInterval", SET_KEY_VALUES(NOP_INTERVAL), &minimum_ops},
+	{"NOPTimeout", SET_KEY_VALUES(NOP_TIMEOUT), &minimum_ops},
 	{NULL,},
 };
 

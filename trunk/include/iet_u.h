@@ -81,6 +81,8 @@ enum {
 	key_wthreads,
 	key_target_type,
 	key_queued_cmnds,
+	key_nop_interval,
+	key_nop_timeout,
 	target_key_last,
 };
 
@@ -118,6 +120,14 @@ struct iet_event {
 #define	DEFAULT_NR_QUEUED_CMNDS	32
 #define	MIN_NR_QUEUED_CMNDS	1
 #define	MAX_NR_QUEUED_CMNDS	256
+
+#define DEFAULT_NOP_INTERVAL 	0
+#define MIN_NOP_INTERVAL 	0
+#define MAX_NOP_INTERVAL 	90
+
+#define	DEFAULT_NOP_TIMEOUT 	0
+#define MIN_NOP_TIMEOUT 	0
+#define MAX_NOP_TIMEOUT		90
 
 #define NETLINK_IET	21
 

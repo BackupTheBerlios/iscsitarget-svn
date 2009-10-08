@@ -46,6 +46,8 @@ struct iscsi_trgt_param {
 	int wthreads;
 	int target_type;
 	int queued_cmnds;
+	int nop_interval;
+	int nop_timeout;
 };
 
 struct tio {

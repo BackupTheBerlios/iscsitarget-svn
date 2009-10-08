@@ -116,7 +116,12 @@ static void trgt_param_check(struct iscsi_param_info *info)
 	CHECK_PARAM(info, iparam, wthreads, MIN_NR_WTHREADS, MAX_NR_WTHREADS);
 	CHECK_PARAM(info, iparam, target_type, 0,
 		    (unsigned int) ARRAY_SIZE(target_type_array) - 1);
-	CHECK_PARAM(info, iparam, queued_cmnds, MIN_NR_QUEUED_CMNDS, MAX_NR_QUEUED_CMNDS);
+	CHECK_PARAM(info, iparam, queued_cmnds, MIN_NR_QUEUED_CMNDS,
+		    MAX_NR_QUEUED_CMNDS);
+	CHECK_PARAM(info, iparam, nop_interval, MIN_NOP_INTERVAL,
+		    MAX_NOP_INTERVAL);
+	CHECK_PARAM(info, iparam, nop_timeout, MIN_NOP_TIMEOUT,
+		    MAX_NOP_TIMEOUT);
 }
 
 static void trgt_param_set(struct iscsi_target *target, struct iscsi_param_info *info)
@@ -130,6 +135,8 @@ static void trgt_param_set(struct iscsi_target *target, struct iscsi_param_info 
 			      target->trgt_param.wthreads, target->tid);
 	SET_PARAM(param, info, iparam, target_type);
 	SET_PARAM(param, info, iparam, queued_cmnds);
+	SET_PARAM(param, info, iparam, nop_interval);
+	SET_PARAM(param, info, iparam, nop_timeout);
 }
 
 static void trgt_param_get(struct iscsi_trgt_param *param, struct iscsi_param_info *info)
@@ -139,6 +146,8 @@ static void trgt_param_get(struct iscsi_trgt_param *param, struct iscsi_param_in
 	GET_PARAM(param, info, iparam, wthreads);
 	GET_PARAM(param, info, iparam, target_type);
 	GET_PARAM(param, info, iparam, queued_cmnds);
+	GET_PARAM(param, info, iparam, nop_interval);
+	GET_PARAM(param, info, iparam, nop_timeout);
 }
 
 static int trgt_param(struct iscsi_target *target, struct iscsi_param_info *info, int set)
