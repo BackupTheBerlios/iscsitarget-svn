@@ -580,7 +580,7 @@ static int cmnd_insert_hash_ttt(struct iscsi_cmnd *cmnd, u32 ttt)
 	int err = 0;
 	u32 itt = cmnd->pdu.bhs.itt;
 
-	head = &session->cmnd_hash[cmnd_hashfn(cmnd->pdu.bhs.itt)];
+	head = &session->cmnd_hash[cmnd_hashfn(itt)];
 
 	spin_lock(&session->cmnd_hash_lock);
 
@@ -1437,14 +1437,16 @@ static void nop_in_tx_end(struct iscsi_cmnd *cmnd)
 	if (!t || t > conn->session->target->trgt_param.nop_interval) {
 		eprintk("Adjusting NOPTimeout of tid %u from %u to %u "
 			"(== NOPInterval)\n", conn->session->target->tid,
-			conn->session->target->trgt_param.nop_timeout,
+			t,
 			conn->session->target->trgt_param.nop_interval);
 		t = conn->session->target->trgt_param.nop_interval;
 		conn->session->target->trgt_param.nop_timeout = t;
 	}
 
 	dprintk(D_GENERIC, "NOP-In %p, %x: timer %p\n",	cmnd, cmnd_ttt(cmnd),
-		&cmnd->req->timer); set_cmnd_timer_active(cmnd->req);
+		&cmnd->req->timer);
+
+	set_cmnd_timer_active(cmnd->req);
 	mod_timer(&cmnd->req->timer, jiffies + HZ * t);
 }
 

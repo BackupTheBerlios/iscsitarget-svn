@@ -650,12 +650,10 @@ out:
 static void close_conn(struct iscsi_conn *conn)
 {
 	struct iscsi_session *session = conn->session;
-	struct iscsi_target *target = session->target;
+	struct iscsi_target *target = conn->session->target;
 	struct iscsi_cmnd *cmnd;
 
-	assert(conn);
-
-	if (session->target->trgt_param.nop_interval)
+	if (target->trgt_param.nop_interval)
 		del_timer_sync(&conn->nop_timer);
 
 	conn->sock->ops->shutdown(conn->sock, 2);
