@@ -386,10 +386,20 @@ static int text_check_param(struct connection *conn)
 	return cnt;
 }
 
+static void login_rsp_ini_err(struct connection *conn, int status_detail)
+{
+	struct iscsi_login_rsp_hdr * const rsp =
+		(struct iscsi_login_rsp_hdr * const)&conn->rsp.bhs;
+
+	rsp->status_class = ISCSI_STATUS_INITIATOR_ERR;
+	rsp->status_detail = status_detail;
+	conn->state = STATE_EXIT;
+}
+
 static void login_start(struct connection *conn)
 {
 	struct iscsi_login_req_hdr *req = (struct iscsi_login_req_hdr *)&conn->req.bhs;
-	struct iscsi_login_rsp_hdr *rsp = (struct iscsi_login_rsp_hdr *)&conn->rsp.bhs;
+
 	char *name, *alias, *session_type, *target_name;
 	struct sockaddr_storage ss;
 	socklen_t slen = sizeof(struct sockaddr_storage);
@@ -399,17 +409,13 @@ static void login_start(struct connection *conn)
 	conn->cid = be16_to_cpu(req->cid);
 	conn->sid.id64 = req->sid.id64;
 	if (!conn->sid.id64) {
-		rsp->status_class = ISCSI_STATUS_INITIATOR_ERR;
-		rsp->status_detail = ISCSI_STATUS_MISSING_FIELDS;
-		conn->state = STATE_EXIT;
+		login_rsp_ini_err(conn, ISCSI_STATUS_MISSING_FIELDS);
 		return;
 	}
 
 	name = text_key_find(conn, "InitiatorName");
 	if (!name) {
-		rsp->status_class = ISCSI_STATUS_INITIATOR_ERR;
-		rsp->status_detail = ISCSI_STATUS_MISSING_FIELDS;
-		conn->state = STATE_EXIT;
+		login_rsp_ini_err(conn, ISCSI_STATUS_MISSING_FIELDS);
 		return;
 	}
 	conn->initiator = strdup(name);
@@ -426,18 +432,14 @@ static void login_start(struct connection *conn)
 		if (!strcmp(session_type, "Discovery"))
 			conn->session_type = SESSION_DISCOVERY;
 		else if (strcmp(session_type, "Normal")) {
-			rsp->status_class = ISCSI_STATUS_INITIATOR_ERR;
-			rsp->status_detail = ISCSI_STATUS_INV_SESSION_TYPE;
-			conn->state = STATE_EXIT;
+			login_rsp_ini_err(conn, ISCSI_STATUS_INV_SESSION_TYPE);
 			return;
 		}
 	}
 
 	if (conn->session_type == SESSION_NORMAL) {
 		if (!target_name) {
-			rsp->status_class = ISCSI_STATUS_INITIATOR_ERR;
-			rsp->status_detail = ISCSI_STATUS_MISSING_FIELDS;
-			conn->state = STATE_EXIT;
+			login_rsp_ini_err(conn, ISCSI_STATUS_MISSING_FIELDS);
 			return;
 		}
 
@@ -448,29 +450,22 @@ static void login_start(struct connection *conn)
 		    || !cops->initiator_allow(target->tid, conn->fd, name)
 		    || !cops->target_allow(target->tid, (struct sockaddr *) &ss)
 		    || !isns_scn_allow(target->tid, name)) {
-			rsp->status_class = ISCSI_STATUS_INITIATOR_ERR;
-			rsp->status_detail = ISCSI_STATUS_TGT_NOT_FOUND;
-			conn->state = STATE_EXIT;
+			login_rsp_ini_err(conn, ISCSI_STATUS_TGT_NOT_FOUND);
 			return;
 		}
 
 		conn->tid = target->tid;
 
-/* 		if (conn->target->max_sessions && */
-/* 		    (++conn->target->session_cnt > conn->target->max_sessions)) { */
-/* 			conn->target->session_cnt--; */
-/* 			rsp->status_class = ISCSI_STATUS_INITIATOR_ERR; */
-/* 			rsp->status_detail = ISCSI_STATUS_TOO_MANY_CONN; */
-/* 			conn->state = STATE_EXIT; */
-/* 			return; */
-/* 		} */
+/*		if (conn->target->max_sessions && */
+/*		    (++conn->target->session_cnt > conn->target->max_sessions)) { */
+/*			conn->target->session_cnt--; */
+/*			login_rsp_ini_err(conn, ISCSI_STATUS_TOO_MANY_CONN); */
+/*			return; */
+/*		} */
 
 		if (ki->param_get(conn->tid, 0, key_session,
-				  conn->session_param)) {
-			rsp->status_class = ISCSI_STATUS_TARGET_ERR;
-			rsp->status_detail = ISCSI_STATUS_SVC_UNAVAILABLE;
-			conn->state = STATE_EXIT;
-		}
+				  conn->session_param))
+			login_rsp_ini_err(conn, ISCSI_STATUS_SVC_UNAVAILABLE);
 	}
 	conn->exp_cmd_sn = be32_to_cpu(req->cmd_sn);
 	log_debug(1, "exp_cmd_sn: %d,%d", conn->exp_cmd_sn, req->cmd_sn);
