@@ -102,17 +102,17 @@ void target_list_build_ifaddrs(struct connection *conn, u32 tid, char *addr,
 void target_list_build(struct connection *conn, char *name)
 {
 	struct target *target;
-	struct sockaddr_storage ss;
+	struct sockaddr_storage ss1, ss2;
 	socklen_t slen = sizeof(struct sockaddr_storage);
 	char addr1[NI_MAXHOST], addr2[NI_MAXHOST];
 	int ret, family, i;
 
-	if (getsockname(conn->fd, (struct sockaddr *) &ss, &slen)) {
+	if (getsockname(conn->fd, (struct sockaddr *) &ss1, &slen)) {
 		log_error("getsockname failed: %m");
 		return;
 	}
 
-	ret = getnameinfo((struct sockaddr *) &ss, slen, addr1,
+	ret = getnameinfo((struct sockaddr *) &ss1, slen, addr1,
 				sizeof(addr1), NULL, 0, NI_NUMERICHOST);
 	if (ret) {
 		log_error("getnameinfo failed: %s",
@@ -121,7 +121,7 @@ void target_list_build(struct connection *conn, char *name)
 		return;
 	}
 
-	family = ss.ss_family;
+	family = ss1.ss_family;
 
 	list_for_each_entry(target, &targets_list, tlist) {
 		if (name && strcmp(target->name, name))
@@ -131,7 +131,7 @@ void target_list_build(struct connection *conn, char *name)
 			|| !cops->initiator_allow(target->tid, conn->fd,
 							conn->initiator)
 			|| !cops->target_allow(target->tid,
-						(struct sockaddr *) &ss))
+						(struct sockaddr *) &ss1))
 			continue;
 
 		text_key_add(conn, "TargetName", target->name);
@@ -142,14 +142,14 @@ void target_list_build(struct connection *conn, char *name)
 			slen = sizeof(struct sockaddr_storage);
 
 			if (getsockname(poll_array[i].fd,
-					(struct sockaddr *) &ss, &slen))
+					(struct sockaddr *) &ss2, &slen))
 				continue;
 
-			if (getnameinfo((struct sockaddr *) &ss, slen, addr2,
+			if (getnameinfo((struct sockaddr *) &ss2, slen, addr2,
 				sizeof(addr2), NULL, 0, NI_NUMERICHOST))
 				continue;
 
-			if (ss.ss_family != family)
+			if (ss2.ss_family != family)
 				continue;
 
 			if (is_addr_unspecified(addr2))
@@ -158,7 +158,7 @@ void target_list_build(struct connection *conn, char *name)
 			else if (strcmp(addr1, addr2)
 				&& !is_addr_loopback(addr2)
 				&& cops->target_allow(target->tid,
-						(struct sockaddr *) &ss))
+						(struct sockaddr *) &ss2))
 				target_print_addr(conn, addr2, family);
 		}
 	}
