@@ -82,13 +82,13 @@ retry:
 		exit(1);
 	}
 
-	log_debug(1, "conn %u session %#" PRIx64 " target %u, state %u",
+	log_debug(1, "conn %u session %#llx target %u, state %u",
 		  event.cid, event.sid, event.tid, event.state);
 
 	switch (event.state) {
 	case E_CONN_CLOSE:
 		if (!(session = session_find_id(event.tid, event.sid))) {
-			log_warning("session %#" PRIx64 " not found?", event.sid);
+			log_warning("session %#llx not found?", event.sid);
 			goto retry;
 		}
 
