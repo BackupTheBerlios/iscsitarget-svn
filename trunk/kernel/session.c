@@ -109,17 +109,16 @@ static int session_free(struct iscsi_session *session)
 int session_add(struct iscsi_target *target, struct session_info *info)
 {
 	struct iscsi_session *session;
-	int err = -EEXIST;
 
 	session = session_lookup(target, info->sid);
 	if (session)
-		return err;
+		return -EEXIST;
 
 	session = iet_session_alloc(target, info);
 	if (!session)
-		err = -ENOMEM;
+		return -ENOMEM;
 
-	return err;
+	return 0;
 }
 
 int session_del(struct iscsi_target *target, u64 sid)
