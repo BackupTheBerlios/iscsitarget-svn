@@ -421,14 +421,12 @@ static int match(u32 tid, struct sockaddr *sa, char *initiator, char *filename)
 		if (!p || *p == '#')
 			continue;
 
-		target = target_find_by_name(p);
-		u32 tid = 0;
-
-		if (target)
-			tid = target->tid;
-
-		if (tid != tid && strcmp(p, "ALL"))
-			continue;
+		if (strcmp(p, "ALL")) {
+			if (!(target = target_find_by_name(p)))
+				continue;
+			if (target->tid != tid)
+				continue;
+		}
 
 		if (__match(sa, initiator, q))
 			err = 0;
