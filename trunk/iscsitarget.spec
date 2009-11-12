@@ -9,46 +9,63 @@
 %define revision 1
 
 ## Build Options
-# Build weak module (KABI tracking) requires weak-modules tool
-%define weak 0
-
 # Build DKMS kernel module
+#
+# Two passes through rpmbuild are required, once for the userland
+# binary package and another time with --target=noarch for the
+# kernel dkms package.
 %define dkms 0
 
 # Build from SVN repository
 %define svn 0
 
-## Package Definitions
-# Basic regex filters for unwanted dependencies (used for weak modules)
-#define pro_filter ""
-%define req_filter "^ksym(\\(fsync_bdev\\|sync_page_range\\))"
-
-# Subversion build information
-%if %svn
-%define svn_url http://svn.berlios.de/svnroot/repos/iscsitarget/trunk
-%define iet_version %(svn info --non-interactive %{svn_url} | awk '{if ($1 == "Revision:") {print "svn_r"$2}}')
-%endif
-
 ## Platform Definitions
 # Determine distribution
-%define is_suse %(test -e /etc/SuSE-release && echo 1 || echo 0)
-%define is_fedora %(test -e /etc/fedora-release && echo 1 || echo 0)
-%define is_redhat %(test -e /etc/redhat-release && echo 1 || echo 0)
-%define is_mandrake %(test -e /etc/mandrake-release && echo 1 || echo 0)
+%define is_suse		%(test -e /etc/SuSE-release && echo 1 || echo 0)
+%define is_fedora	%(test -e /etc/fedora-release && echo 1 || echo 0)
+%define is_redhat	%(test -e /etc/redhat-release && echo 1 || echo 0)
+%define is_mandrake	%(test -e /etc/mandrake-release && echo 1 || echo 0)
+%define is_mandriva	%(test -e /etc/mandriva-release && echo 1 || echo 0)
 
 # Define kernel version information
 %{!?kernel:	%define kernel %(uname -r)}
 
-%define kver	%(echo %{kernel} | sed -e 's/smp//' -e 's/bigmem//' -e 's/enterprise//')
-%define ktype	%(echo kernel-%{kernel} | sed -e 's/%{kver}//' -e 's/-$//')
+%define kver	%(echo %{kernel} | sed -e 's/default//' -e 's/pae//i' -e 's/xen//' -e 's/smp//' -e 's/bigmem//' -e 's/hugemem//' -e 's/enterprise//' -e 's/-$//')
 %define krel	%(echo %{kver} | sed -e 's/-/_/g')
-%define kminor	%(echo %{kernel} | sed -e 's/.*\\([0-9][0-9]*\\)-.*/\\1/')
+%define ktype	%(echo kernel-%{kernel} | sed -e 's/%{kver}//' -e 's/--/-/' -e 's/-$//')
 
-# Set location of weak-modules tool
+%define module	/lib/modules/%{kernel}/extra/iscsi/iscsi_trgt.ko
+
+# Set location of tools
+%define __chkconfig	/sbin/chkconfig
+%define __depmod	/sbin/depmod
+%define __dkms		/usr/sbin/dkms
+%define __modprobe	/sbin/modprobe
+%define __service	/sbin/service
+%define __svn		/usr/bin/svn
 %if %is_suse
-%define weak_modules /usr/lib/module-init-tools/weak-modules
+%define __weak_modules	/usr/lib/module-init-tools/weak-modules
 %else
-%define weak_modules /sbin/weak-modules
+%define __weak_modules	/sbin/weak-modules
+%endif
+
+# Subversion build information
+%if %svn
+%define svn_url http://svn.berlios.de/svnroot/repos/iscsitarget/trunk
+%define iet_version %(%{__svn} info --non-interactive %{svn_url} | awk '{if ($1 == "Revision:") {print "svn_r"$2}}')
+%endif
+
+# Build weak module (KABI Tracking) on platforms that support it
+%define weak %(test -x %{__weak_modules} && echo 1 || echo 0)
+
+# Basic regex filters for unwanted dependencies (used for weak modules)
+%if %weak
+%define pro_filter ""
+%if %is_redhat
+%define req_filter "\\(fsync_bdev\\|sync_page_range\\)"
+%else
+%define req_filter ""
+%endif
 %endif
 
 # Define build user
@@ -75,13 +92,19 @@ Source0: %{name}-%{version}.tar.gz
 %endif
 
 ## Patches
+#Patch0: %{name}-example.p
 
 ## Install Requirements
-Requires: kmod-%{name} = %{version}
+Requires: %{name}-kmod = %{version}
 
 ## Build Requirements
 BuildRequires: kernel >= 2.6
-BuildRequires: %{ktype}-devel = %{kver}, gcc, make, patch, binutils, /usr/bin/install, openssl-devel
+BuildRequires: gcc, make, patch, binutils, /usr/bin/install, openssl-devel
+%if %is_suse
+BuildRequires: kernel-source = %{kver}
+%else
+BuildRequires: %{ktype}-devel = %{kver}
+%endif
 %if %svn
 BuildRequires: subversion
 %endif
@@ -107,11 +130,15 @@ Group: System Environment/Kernel
 Release: %{release}_dkms
 
 ## Install Requirements
-Requires: %{ktype}-devel, gcc, make, patch, binutils, openssl-devel
-Requires: dkms >= 2
+Requires: dkms >= 2, gcc, make, patch, binutils
+%if %is_suse
+Requires: kernel-source
+%else
+Requires: %{ktype}-devel
+%endif
 
 ## Install Provides
-Provides: kmod-%{name} = %{version}
+Provides: %{name}-kmod = %{version}
 
 ## Description
 %description -n kmod-%{name}
@@ -127,18 +154,18 @@ Release: %{release}_%{krel}
 
 ## Install Requirements
 %if %weak
-%global _use_internal_dependency_generator 0
-Requires(post): %{weak_modules}
-Requires(postun): %{weak_modules}
+Requires: %{ktype}
+Requires(post): %{__weak_modules}
+Requires(postun): %{__weak_modules}
 %else
 Requires: %{ktype} = %{kver}
 %endif
-Requires(post): /sbin/depmod
-Requires(postun): /sbin/depmod
+Requires(post): %{__depmod}
+Requires(postun): %{__depmod}
 
 ## Install Provides
 Provides: kernel-modules = %{kver}
-Provides: kmod-%{name} = %{version}
+Provides: %{name}-kmod = %{version}
 
 ## Description
 %description -n kmod-%{name}
@@ -158,15 +185,16 @@ iSCSI Enterprise Target kernel module
 %if %svn
 %setup -q -D -T -c -n %{name}-%{version}
 if [ ! -f include/iet_u.h ]; then
-svn export --force --non-interactive -q %{svn_url} .
-sed -i -e "s/\(#define IET_VERSION_STRING\).*/\1\t\"%{version}\"/" include/iet_u.h
+%{__svn} export --force --non-interactive -q %{svn_url} .
+%{__sed} -i -e "s/\(#define IET_VERSION_STRING\).*/\1\t\"%{version}\"/" include/iet_u.h
+# Patches to apply to SVN
+#%patch0 -p0
 fi
 %else
 %setup -q -n %{name}-%{version}
+# Patches to apply to release
+#%patch0 -p0
 %endif
-
-
-## Patch
 
 
 ## Build
@@ -190,20 +218,23 @@ fi
 %{__make} install-usr install-doc install-etc KERNELSRC=/lib/modules/%{kernel}/build DISTDIR=%{buildroot}
 %else
 %{__make} install-files KERNELSRC=/lib/modules/%{kernel}/build DISTDIR=%{buildroot}
-rm -f %{buildroot}/lib/modules/%{kernel}/modules.*
+%{__rm} -f %{buildroot}/lib/modules/%{kernel}/modules.*
 %endif
-mkdir -p %{buildroot}/etc/rc.d
-mv %{buildroot}/etc/init.d %{buildroot}/etc/rc.d
-rm -rf %{buildroot}/usr/share/doc/iscsitarget
+%if %is_redhat || %is_fedora
+%{__mkdir} -p %{buildroot}/etc/rc.d
+%{__mv} %{buildroot}/etc/init.d %{buildroot}/etc/rc.d
+%endif
+%{__rm} -rf %{buildroot}/usr/share/doc/iscsitarget
 %elseif %dkms
-mkdir -p %{buildroot}/usr/src/%{name}-%{version}
-cp -r COPYING include kernel patches %{buildroot}/usr/src/%{name}-%{version}
-sed -e "s/PACKAGE_VERSION=.*/PACKAGE_VERSION=\"%{version}\"/" dkms.conf >%{buildroot}/usr/src/%{name}-%{version}/dkms.conf
+%{__mkdir} -p %{buildroot}/usr/src/%{name}-%{version}
+%{__cp} -r COPYING include kernel patches %{buildroot}/usr/src/%{name}-%{version}
+%{__sed} -e "s/PACKAGE_VERSION=.*/PACKAGE_VERSION=\"%{version}\"/" dkms.conf >%{buildroot}/usr/src/%{name}-%{version}/dkms.conf
 %endif
 
 # Ugly hack to filter out unwanted dependencies
 %if %weak
-%if %{?pro_filter:1}%{!?pro_filter:0}
+%global _use_internal_dependency_generator 0
+%if %(test -n "%{pro_filter}" && echo 1 || echo 0)
 %define iet_provides %{_tmppath}/iet_provides-%{user}
 %{__cat} << EOF > %{iet_provides}
 %{__find_provides} "\$@" | %{__grep} -v %{pro_filter}
@@ -212,7 +243,7 @@ EOF
 %{__chmod} 755 %{iet_provides}
 %define __find_provides %{iet_provides}
 %endif
-%if %{?req_filter:1}%{!?req_filter:0}
+%if %(test -n "%{req_filter}" && echo 1 || echo 0)
 %define iet_requires %{_tmppath}/iet_requires-%{user}
 %{__cat} << EOF > %{iet_requires}
 %{__find_requires} "\$@" | %{__grep} -v %{req_filter}
@@ -223,22 +254,24 @@ EOF
 %endif
 %endif
 
-
 ## Cleaning
 %clean
 %{__rm} -rf %{buildroot}
 %if %{?iet_provides:1}%{!?iet_provides:0}
-rm -f %{iet_provides}
+%{__rm} -f %{iet_provides}
 %endif
 %if %{?iet_requires:1}%{!?iet_requires:0}
-rm -f %{iet_requires}
+%{__rm} -f %{iet_requires}
 %endif
 
 
 ## Post-Install Script
 %ifnarch noarch
 %post
-/sbin/chkconfig --add iscsi-target
+%if %is_suse
+%{__ln} -s %{_initrddir}/iscsi-target %{_sbindir}/rciscsi-target
+%endif
+%{__chkconfig} --add iscsi-target
 %endif
 
 
@@ -246,9 +279,12 @@ rm -f %{iet_requires}
 %ifnarch noarch
 %preun
 if [ "$1" = 0 ]; then
-    /sbin/service iscsi-target stop &>/dev/null
-    /sbin/chkconfig --del iscsi-target
+    %{__service} iscsi-target stop &>/dev/null
+    %{__chkconfig} --del iscsi-target &>/dev/null
 fi
+%if %is_suse
+%{__rm} -f %{_sbindir}/rciscsi-target
+%endif
 %endif
 
 
@@ -256,7 +292,7 @@ fi
 %ifnarch noarch
 %postun
 if [ "$1" != 0 ]; then
-    /sbin/service iscsi-target condrestart 2>&1 > /dev/null
+    %{__service} iscsi-target condrestart &>/dev/null
 fi
 %endif
 
@@ -265,16 +301,16 @@ fi
 %if %dkms
 %ifarch noarch
 %post -n kmod-%{name}
-/usr/sbin/dkms add -m %{name} -v %{version}
-/usr/sbin/dkms build -m %{name} -v %{version}
-/usr/sbin/dkms install -m %{name} -v %{version}
+%{__dkms} add -m %{name} -v %{version}
+%{__dkms} build -m %{name} -v %{version}
+%{__dkms} install -m %{name} -v %{version}
 %endif
 %else
 %post -n kmod-%{name}
-/sbin/depmod %{kernel} -A
+%{__depmod} %{kernel} -a
 %if %weak
-if [ -x %{weak_modules} ]; then
-	echo /lib/modules/%{kernel}/extra/iscsi/iscsi_trgt.ko | %{weak_modules} --add-modules
+if [ -x %{__weak_modules} ]; then
+    echo %{module} | %{__weak_modules} --add-modules
 fi
 %endif
 %endif
@@ -284,17 +320,23 @@ fi
 %if %dkms
 %ifarch noarch
 %preun -n kmod-%{name}
-/usr/sbin/dkms remove -m %{name} -v %{version} --all
+%{__dkms} remove -m %{name} -v %{version} --all
 %endif
 %else
 %preun -n kmod-%{name}
-modprobe -r -q --set-version %{kernel} iscsi_trgt
-/sbin/depmod %{kernel} -A
+%{__modprobe} -r -q --set-version %{kernel} iscsi_trgt
 %if %weak
-if [ -x %{weak_modules} ]; then
-	echo /lib/modules/%{kernel}/extra/iscsi/iscsi_trgt.ko | %{weak_modules} --remove-modules
+if [ -x %{__weak_modules} ]; then
+    echo %{module} | %{__weak_modules} --remove-modules
 fi
 %endif
+%endif
+
+
+## Post-Uninstall Script (Kernel Module)
+%if !%dkms
+%postun -n kmod-%{name}
+%{__depmod} %{kernel} -a
 %endif
 
 
@@ -304,7 +346,7 @@ fi
 %defattr(-, root, root)
 %{_sbindir}/*
 %{_mandir}/man?/*
-%{_sysconfdir}/rc.d/init.d/*
+%{_initrddir}/*
 %config(noreplace) %{_sysconfdir}/iet/ietd.conf
 %config(noreplace) %{_sysconfdir}/iet/initiators.allow
 %config(noreplace) %{_sysconfdir}/iet/targets.allow
@@ -327,9 +369,18 @@ fi
 
 
 %changelog
+* Wed Oct 14 2009 Ross Walker <rswwalker at gmail dot com> - 1.4.18
+- Added more macros for better cross-distro support
+- Modified Matt's update for better Redhat-SuSE compatibility
+
+* Fri Oct 09 2009 Matthew Wild <matthew.wild at stfc dot ac dot uk> - 1.4.18
+- Added openSuSE specific configuration
+- Tidied up files section for init.d|rc.d
+- run depmod with -a rather than -A option
+
 * Wed Sep 25 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-244
 - SuSE puts weak-modules under /usr/lib/module-init-tools
-- Kernel module now located in /lib/modules/<kver>/extra
+- Kernel module now located in /lib/modules/<kernel>/extra/iscsi
 
 * Wed Sep 25 2009 Ross Walker <rswwalker at gmail dot com> - 0.4.17-242
 - Added ability to build weak modules for platforms that support them
