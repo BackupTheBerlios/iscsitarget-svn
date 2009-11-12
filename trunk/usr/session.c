@@ -153,8 +153,7 @@ void session_remove(struct session *session)
 {
 	log_debug(1, "session_remove: %#"  PRIx64, session->sid.id64);
 
-	if (!session->sid.id.tsih)
-		ki->session_destroy(session->target->tid, session->sid.id64);
+	ki->session_destroy(session->target->tid, session->sid.id64);
 
 	if (session->target) {
 		remque(&session->slist);

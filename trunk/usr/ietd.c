@@ -404,6 +404,7 @@ void event_loop(int timeout)
 
 		conn_close:
 			if (conn->state == STATE_CLOSE) {
+				struct session *session = conn->session;
 				log_debug(1, "connection closed");
 				conn_free_pdu(conn);
 				conn_free(conn);
@@ -411,6 +412,8 @@ void event_loop(int timeout)
 				pollfd->fd = -1;
 				incoming[i] = NULL;
 				incoming_cnt--;
+				if (session && !session->conn_cnt)
+					session_remove(session);
 			}
 		}
 	}
