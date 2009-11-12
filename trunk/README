@@ -80,6 +80,36 @@ If you use Linux distribution that does not have /etc/init.d, the
 boot script will not be installed. So you need to install it to an
 appropriate directory manually.
 
+Cross compilation
+-----------------
+To cross compile the iSCSI Enterprise Target for a particular
+target the following things need to be setup on the development
+machine:
+1) Cross compiler toolchain. The tools need to be in the shell's
+path for the following to work.
+2) Linux kernel source code of the target.
+
+The global Makefile doesn't support cross compilation so the user
+space code (ietd and ietadm) and the kernel code need to be build
+separately.
+
+The command line to build the user space code is
+
+make CC=compiler_name usr
+
+e.g
+
+make CC=powerpc-unknown-linux-gnu-gcc usr
+
+The command line to build the kernel module is
+
+make ARCH=<architecture> CROSS_COMPILE=<toolchain prefix> \
+ KSRC=<kernel-src> kernel
+
+e.g.
+
+make ARCH=powerpc CROSS_COMPILE=powerpc-unknown-linux-gnu- \
+ KSRC=/root/linux-2.6.30.2 kernel
 
 Configuration
 -------------
