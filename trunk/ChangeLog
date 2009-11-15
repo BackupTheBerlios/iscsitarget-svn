@@ -1,3 +1,30 @@
+Summary of changes from v1.4.18 to v1.4.19
+=================================
+Andreas Florath
+  o re-enable MaxSessions parameter
+  o code cleanups
+
+Arne Redlich
+  o NOP-In support
+
+Harshal Shete
+  o add notes about cross compilation to README
+
+SZÉKELYI Szabolcs
+  o fix ietadm manpage
+
+Ross S. W. Walker
+  o fix initiators/targets.allow bugs
+  o fix compiler warnings
+  o fix return value of session_add()
+  o update RPM specfile improving RedHat and SuSE compatibility
+    (based on a patch from Matthew Wild)
+  o update RELEASE NOTES
+
+Kevin Ye
+  o fix session cleanup in case of -EPIPE during login
+
+
 Summary of changes from v0.4.17 to v1.4.18
 =================================
 Lars Ellenberg
