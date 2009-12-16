@@ -193,35 +193,54 @@ void volume_put(struct iet_volume *volume)
 
 int volume_reserve(struct iet_volume *volume, u64 sid)
 {
+	int err = 0;
+
 	if (!volume)
 		return -ENOENT;
 
 	spin_lock(&volume->reserve_lock);
-	if (volume->reserve_sid && volume->reserve_sid != sid) {
-		spin_unlock(&volume->reserve_lock);
-		return -EBUSY;
-	}
+	if (volume->reserve_sid && volume->reserve_sid != sid)
+		err = -EBUSY;
+	else
+		volume->reserve_sid = sid;
 
-	volume->reserve_sid = sid;
 	spin_unlock(&volume->reserve_lock);
-
-	return 0;
+	return err;
 }
 
 int is_volume_reserved(struct iet_volume *volume, u64 sid)
 {
-	if (!volume || !volume->reserve_sid || volume->reserve_sid == sid)
-		return 0;
+	int err = 0;
 
-	return -EBUSY;
+	if (!volume)
+		return -ENOENT;
+
+	spin_lock(&volume->reserve_lock);
+	if (!volume->reserve_sid || volume->reserve_sid == sid)
+		err = 0;
+	else
+		err = -EBUSY;
+
+	spin_unlock(&volume->reserve_lock);
+	return err;
 }
 
 int volume_release(struct iet_volume *volume, u64 sid, int force)
 {
+	int err = 0;
+
+	if (!volume)
+		return -ENOENT;
+
+	spin_lock(&volume->reserve_lock);
+
 	if (force || volume->reserve_sid == sid)
 		volume->reserve_sid = 0;
+	else
+		err = -EBUSY;
 
-	return 0;
+	spin_unlock(&volume->reserve_lock);
+	return err;
 }
 
 static void iet_volume_info_show(struct seq_file *seq, struct iscsi_target *target)

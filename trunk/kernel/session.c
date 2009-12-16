@@ -124,6 +124,7 @@ int session_add(struct iscsi_target *target, struct session_info *info)
 int session_del(struct iscsi_target *target, u64 sid)
 {
 	struct iscsi_session *session;
+	struct iet_volume *volume;
 
 	session = session_lookup(target, sid);
 	if (!session)
@@ -134,6 +135,9 @@ int session_del(struct iscsi_target *target, u64 sid)
 		return -EBUSY;
 	}
 
+	list_for_each_entry(volume, &target->volumes, list){
+		volume_release(volume, sid, 0);
+	}
 	return session_free(session);
 }
 

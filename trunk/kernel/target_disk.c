@@ -432,9 +432,19 @@ static void build_reserve_response(struct iscsi_cmnd *cmnd)
 
 static void build_release_response(struct iscsi_cmnd *cmnd)
 {
-	if (volume_release(cmnd->lun,
-			   cmnd->conn->session->sid, 0))
+	int ret = volume_release(cmnd->lun,
+				 cmnd->conn->session->sid, 0);
+	switch (ret) {
+	case -ENOENT:
+		/* Logical Unit Not Supported (?) */
+		iscsi_cmnd_set_sense(cmnd, ILLEGAL_REQUEST, 0x25, 0x0);
+		break;
+	case -EBUSY:
 		cmnd->status = SAM_STAT_RESERVATION_CONFLICT;
+		break;
+	default:
+		break;
+	}
 }
 
 static void build_reservation_conflict_response(struct iscsi_cmnd *cmnd)
@@ -475,8 +485,9 @@ static int disk_check_reservation(struct iscsi_cmnd *cmnd)
 {
 	struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
 
-	if (is_volume_reserved(cmnd->lun,
-			       cmnd->conn->session->sid)) {
+	int ret = is_volume_reserved(cmnd->lun,
+				     cmnd->conn->session->sid);
+	if (ret == -EBUSY) {
 		switch (req->scb[0]) {
 		case INQUIRY:
 		case RELEASE:
