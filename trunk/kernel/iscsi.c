@@ -1140,35 +1140,57 @@ out:
 	return;
 }
 
-static int __cmnd_abort(struct iscsi_cmnd *cmnd)
+static void __cmnd_abort(struct iscsi_cmnd *cmnd)
 {
 	if (cmnd_waitio(cmnd))
-		return -ISCSI_RESPONSE_UNKNOWN_TASK;
+		return;
 
 	if (cmnd->conn->read_cmnd != cmnd)
 		cmnd_release(cmnd, 1);
 	else if (cmnd_rxstart(cmnd))
 		set_cmnd_tmfabort(cmnd);
-	else
-		return -ISCSI_RESPONSE_UNKNOWN_TASK;
-
-	return 0;
 }
 
-static int cmnd_abort(struct iscsi_session *session, u32 itt)
+static int cmnd_abort(struct iscsi_session *session, struct iscsi_cmnd *req)
 {
+	struct iscsi_task_mgt_hdr *req_hdr =
+				(struct iscsi_task_mgt_hdr *)&req->pdu.bhs;
 	struct iscsi_cmnd *cmnd;
-	int err =  -ISCSI_RESPONSE_UNKNOWN_TASK;
 
-	if ((cmnd = cmnd_find_hash(session, itt, ISCSI_RESERVED_TAG))) {
-		eprintk("%x %x %x %u %u %u %u\n", cmnd_itt(cmnd), cmnd_opcode(cmnd),
-			cmnd->r2t_length, cmnd_scsicode(cmnd),
-			cmnd_write_size(cmnd), cmnd->is_unsolicited_data,
-			cmnd->outstanding_r2t);
-		err = __cmnd_abort(cmnd);
+	u32 max_queued_cmnds = req->conn->session->max_queued_cmnds;
+	u32 min_cmd_sn = req_hdr->cmd_sn - (max_queued_cmnds + 1);
+
+	if (after(req_hdr->ref_cmd_sn, req_hdr->cmd_sn))
+		return ISCSI_RESPONSE_FUNCTION_REJECTED;
+
+	if (!(cmnd = cmnd_find_hash(session, req_hdr->rtt, ISCSI_RESERVED_TAG))) {
+		if (between(req_hdr->ref_cmd_sn, min_cmd_sn, req_hdr->cmd_sn))
+			return ISCSI_RESPONSE_FUNCTION_COMPLETE;
+		else
+			return ISCSI_RESPONSE_UNKNOWN_TASK;
 	}
 
-	return err;
+	if (cmnd_opcode(cmnd) == ISCSI_OP_SCSI_TASK_MGT_MSG)
+		return ISCSI_RESPONSE_FUNCTION_REJECTED;
+
+	if (cmnd_hdr(cmnd)->lun != req_hdr->lun)
+		return ISCSI_RESPONSE_FUNCTION_REJECTED;
+
+	if (cmnd->conn && test_bit(CONN_ACTIVE, &cmnd->conn->state)) {
+		if (cmnd->conn != req->conn)
+			return ISCSI_RESPONSE_FUNCTION_REJECTED;
+	} else {
+		/* Switch cmnd connection allegiance */
+	}
+
+	__cmnd_abort(cmnd);
+
+	eprintk("%x %x %x %u %u %u %u\n", cmnd_itt(cmnd), cmnd_opcode(cmnd),
+		cmnd->r2t_length, cmnd_scsicode(cmnd),
+		cmnd_write_size(cmnd), cmnd->is_unsolicited_data,
+		cmnd->outstanding_r2t);
+
+	return ISCSI_RESPONSE_FUNCTION_COMPLETE;
 }
 
 static int target_reset(struct iscsi_cmnd *req, u32 lun, int all)
@@ -1214,7 +1236,11 @@ static void task_set_abort(struct iscsi_cmnd *req)
 
 	list_for_each_entry(conn, &session->conn_list, list) {
 		list_for_each_entry_safe(cmnd, tmp, &conn->pdu_list, conn_list) {
-			if (cmnd != req)
+			if (cmnd_hdr(cmnd)->lun != cmnd_hdr(req)->lun)
+				continue;
+
+			if (before(cmnd_hdr(cmnd)->cmd_sn,
+					cmnd_hdr(req)->cmd_sn))
 				__cmnd_abort(cmnd);
 		}
 	}
@@ -1274,7 +1300,7 @@ static void execute_task_management(struct iscsi_cmnd *req)
 	struct iscsi_task_mgt_hdr *req_hdr = (struct iscsi_task_mgt_hdr *)&req->pdu.bhs;
 	struct iscsi_task_rsp_hdr *rsp_hdr;
 	u32 lun;
-	int err, function = req_hdr->function & ISCSI_FUNCTION_MASK;
+	int function = req_hdr->function & ISCSI_FUNCTION_MASK;
 
 	rsp = iscsi_cmnd_create_rsp_cmnd(req, 1);
 	rsp_hdr = (struct iscsi_task_rsp_hdr *)&rsp->pdu.bhs;
@@ -1299,8 +1325,7 @@ static void execute_task_management(struct iscsi_cmnd *req)
 
 	switch (function) {
 	case ISCSI_FUNCTION_ABORT_TASK:
-		if ((err = cmnd_abort(conn->session, req_hdr->rtt)) < 0)
-			rsp_hdr->response = -err;
+		rsp_hdr->response = cmnd_abort(conn->session, req);
 		break;
 	case ISCSI_FUNCTION_ABORT_TASK_SET:
 		task_set_abort(req);
