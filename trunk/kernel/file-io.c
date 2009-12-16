@@ -88,7 +88,7 @@ static int fileio_sync(struct iet_volume *lu, struct tio *tio)
 		count = lu->blk_cnt << lu->blk_shift;
 	}
 
-	res = sync_page_range(inode, mapping, ppos, count);
+	res = filemap_write_and_wait_range(mapping, ppos, ppos + count - 1);
 	if (res) {
 		eprintk("I/O error: syncing pages failed: %d\n", res);
 		return -EIO;
