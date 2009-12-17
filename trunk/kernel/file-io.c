@@ -53,9 +53,9 @@ static int fileio_make_request(struct iet_volume *lu, struct tio *tio, int rw)
 		set_fs(get_ds());
 
 		if (rw == READ)
-			ret = do_sync_read(filp, buf, count, &ppos);
+			ret = vfs_read(filp, buf, count, &ppos);
 		else
-			ret = do_sync_write(filp, buf, count, &ppos);
+			ret = vfs_write(filp, buf, count, &ppos);
 
 		set_fs(oldfs);
 

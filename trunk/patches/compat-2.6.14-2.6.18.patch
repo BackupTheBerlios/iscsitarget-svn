@@ -173,22 +173,6 @@ Index: kernel/digest.c
 +	digest_data(cmnd->conn->tx_digest_tfm, cmnd, tio,
  		    be32_to_cpu(req->buffer_offset), (u8 *) &cmnd->ddigest);
  }
-Index: kernel/file-io.c
-===================================================================
---- 1/kernel/file-io.c	(revision 105)
-+++ 2/kernel/file-io.c	(working copy)
-@@ -53,9 +53,9 @@ static int fileio_make_request(struct ie
- 		set_fs(get_ds());
- 
- 		if (rw == READ)
--			ret = do_sync_read(filp, buf, count, &ppos);
-+			ret = generic_file_read(filp, buf, count, &ppos);
- 		else
--			ret = do_sync_write(filp, buf, count, &ppos);
-+			ret = generic_file_write(filp, buf, count, &ppos);
- 
- 		set_fs(oldfs);
- 
 Index: kernel/iscsi.c
 ===================================================================
 --- 1/kernel/iscsi.c	(revision 105)
