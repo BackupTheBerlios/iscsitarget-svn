@@ -131,37 +131,23 @@ int session_del(struct iscsi_target *target, u64 sid)
 		return -ENOENT;
 
 	if (!list_empty(&session->conn_list)) {
-		eprintk("%llu still have connections\n", (unsigned long long) session->sid);
-		return -EBUSY;
+		DECLARE_COMPLETION_ONSTACK(done);
+		struct iscsi_conn *conn;
+
+		session->done = &done;
+		list_for_each_entry(conn, &session->conn_list, list)
+			conn_close(conn);
+
+		target_unlock(target);
+		wait_for_completion(&done);
+		target_lock(target, 0);
 	}
 
 	list_for_each_entry(volume, &target->volumes, list){
 		volume_release(volume, sid, 0);
 	}
+
 	return session_free(session);
-}
-
-void session_del_all(struct iscsi_target *target)
-{
-	DECLARE_COMPLETION_ONSTACK(done);
-	struct iscsi_session *sess;
-
-	while (!list_empty(&target->session_list)) {
-		init_completion(&done);
-		target_lock(target, 0);
-		sess = list_entry(target->session_list.next, struct
-				  iscsi_session, list);
-		sess->done = &done;
-		conn_del_all(sess);
-		target_unlock(target);
-		wait_for_completion(&done);
-		target_lock(target, 0);
-		session_free(sess);
-		target_unlock(target);
-	}
-
-	if (target->done)
-		complete(target->done);
 }
 
 static void iet_session_info_show(struct seq_file *seq, struct iscsi_target *target)

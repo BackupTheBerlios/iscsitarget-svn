@@ -127,7 +127,6 @@ struct iscsi_target {
 	struct worker_thread_info * wthread_info;
 
 	struct semaphore target_sem;
-	struct completion *done;
 };
 
 struct iscsi_queue {
@@ -336,7 +335,6 @@ extern void send_nop_in(struct iscsi_conn *);
 extern struct iscsi_conn *conn_lookup(struct iscsi_session *, u16);
 extern int conn_add(struct iscsi_session *, struct conn_info *);
 extern int conn_del(struct iscsi_session *, struct conn_info *);
-extern void conn_del_all(struct iscsi_session *);
 extern int conn_free(struct iscsi_conn *);
 extern void conn_close(struct iscsi_conn *);
 extern void conn_info_show(struct seq_file *, struct iscsi_session *);
@@ -377,7 +375,6 @@ extern struct file_operations session_seq_fops;
 extern struct iscsi_session *session_lookup(struct iscsi_target *, u64);
 extern int session_add(struct iscsi_target *, struct session_info *);
 extern int session_del(struct iscsi_target *, u64);
-extern void session_del_all(struct iscsi_target *);
 
 /* volume.c */
 extern struct file_operations volume_seq_fops;

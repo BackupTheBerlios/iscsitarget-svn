@@ -242,12 +242,3 @@ int conn_del(struct iscsi_session *session, struct conn_info *info)
 
 	return 0;
 }
-
-/* target_lock() supposed to be held */
-void conn_del_all(struct iscsi_session *session)
-{
-	struct iscsi_conn *conn;
-
-	list_for_each_entry(conn, &session->conn_list, list)
-		conn_close(conn);
-}
