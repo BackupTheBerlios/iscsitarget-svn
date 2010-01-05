@@ -34,19 +34,21 @@
 %define krel	%(echo %{kver} | sed -e 's/-/_/g')
 %define ktype	%(echo kernel-%{kernel} | sed -e 's/%{kver}//' -e 's/--/-/' -e 's/-$//')
 
-%define module	/lib/modules/%{kernel}/extra/iscsi/iscsi_trgt.ko
+%define moddir  /lib/modules/%{kernel}
+%define module	%{moddir}/extra/iscsi/iscsi_trgt.ko
 
 # Set location of tools
-%define __chkconfig	/sbin/chkconfig
-%define __depmod	/sbin/depmod
-%define __dkms		/usr/sbin/dkms
-%define __modprobe	/sbin/modprobe
-%define __service	/sbin/service
-%define __svn		/usr/bin/svn
+%{!?__chkconfig:	%define __chkconfig	/sbin/chkconfig}
+%{!?__depmod:		%define __depmod	/sbin/depmod}
+%{!?__dkms:		%define __dkms		/usr/sbin/dkms}
+%{!?__find:		%define __find		/usr/bin/find}
+%{!?__modprobe:		%define __modprobe	/sbin/modprobe}
+%{!?__service:		%define __service	/sbin/service}
+%{!?__svn:		%define __svn		/usr/bin/svn}
 %if %is_suse
-%define __weak_modules	/usr/lib/module-init-tools/weak-modules
+%{!?__weak_modules:	%define __weak_modules	/usr/lib/module-init-tools/weak-modules}
 %else
-%define __weak_modules	/sbin/weak-modules
+%{!?__weak_modules:	%define __weak_modules	/sbin/weak-modules}
 %endif
 
 # Subversion build information
@@ -297,6 +299,13 @@ fi
 %endif
 
 
+## Pre-Install Script (Kernel Module)
+%if !%dkms
+%pre -n kmod-%{name}
+%{__find} %{moddir} -type f -name iscsi_trgt.ko -execdir mv \{\} \{\}.orig \;
+%endif
+
+
 ## Post-Install Script (Kernel Module)
 %if %dkms
 %ifarch noarch
@@ -336,6 +345,7 @@ fi
 ## Post-Uninstall Script (Kernel Module)
 %if !%dkms
 %postun -n kmod-%{name}
+%{__find} %{moddir} -name iscsi_trgt.ko.orig -execdir mv \{\} iscsi_trgt.ko \;
 %{__depmod} %{kernel} -a
 %endif
 

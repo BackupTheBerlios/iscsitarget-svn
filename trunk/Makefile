@@ -205,6 +205,15 @@ install-files: install-usr install-etc install-doc install-kernel
 install: install-files depmod
 
 install-kernel: kernel/iscsi_trgt.ko
+	@if [ -f /etc/debian_version ]; then \
+		find $(DISTDIR)$(INSTALL_MOD_PATH)/lib/modules/$(KVER) \
+			-name iscsi_trgt.ko -type f \
+			-exec /bin/sh -c "dpkg-divert --rename {}" \;; \
+	else \
+		find $(DISTDIR)$(INSTALL_MOD_PATH)/lib/modules/$(KVER) \
+			-name iscsi_trgt.ko -type f \
+			-execdir mv \{\} \{\}.orig \;; \
+	fi
 	@install -vD kernel/iscsi_trgt.ko \
 		$(DISTDIR)$(INSTALL_MOD_PATH)$(KMOD)/iscsi/iscsi_trgt.ko
 
@@ -275,6 +284,16 @@ uninstall: uninstall-kernel depmod uninstall-usr uninstall-etc uninstall-doc
 
 uninstall-kernel:
 	rm -f $(DISTDIR)$(INSTALL_MOD_PATH)$(KMOD)/iscsi/iscsi_trgt.ko
+	@if [ -f /etc/debian_version ]; then \
+		find $(DISTDIR)$(INSTALL_MOD_PATH)/lib/modules/$(KVER) \
+			-name iscsi_trgt.ko.distrib -type f \
+			-exec /bin/sh -c "dpkg-divert --remove --rename \
+				\`dirname {}\`/iscsi_trgt.ko" \;; \
+	else \
+		find $(DISTDIR)$(INSTALL_MOD_PATH)/lib/modules/$(KVER) \
+			-name iscsi_trgt.ko.orig -type f \
+			-execdir mv \{\} iscsi_trgt.ko \;; \
+        fi
 
 uninstall-usr:
 	@rm -f $(DISTDIR)/usr/sbin/ietd
